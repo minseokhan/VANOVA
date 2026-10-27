@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import type { SessionUser } from "@/lib/auth/session";
@@ -10,7 +11,7 @@ export function MobileHeader({ user, pendingCount }: { user: SessionUser; pendin
   return (
     <>
       <header className="no-print flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
-        <span className="text-base font-semibold text-slate-900">VAN AI 혁신부</span>
+        <Image src="/brand/vanova-wordmark.png" alt="VANOVA" width={102} height={20} priority />
         <button
           type="button"
           aria-label="메뉴 열기"

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FileText, LayoutGrid, Lightbulb, Megaphone, MessageSquare, NotebookText, Plus, Receipt, Settings, UserCheck, Users, type LucideIcon } from "lucide-react";
@@ -66,7 +67,9 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full w-60 flex-col bg-navy-900 text-white">
-      <div className="px-5 py-5 text-base font-semibold tracking-tight">VAN AI 혁신부</div>
+      <div className="px-5 py-5">
+        <Image src="/brand/vanova-wordmark-dark.png" alt="VANOVA" width={121} height={24} priority />
+      </div>
       <nav className="flex-1 space-y-1 px-3">
         {(isAdmin ? MAIN : [MAIN[0], NOTICE, ...MAIN.slice(1)]).map(renderItem)}
         {isAdmin && (
