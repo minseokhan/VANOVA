@@ -37,6 +37,11 @@ export function canDeleteInquiry(
   return isAdmin(user) || (inquiry.authorId === user.id && inquiry.answer === null);
 }
 
+/** 답변이 달리면 질문이 바뀌지 않도록 막는다 — 작성자 본인, 미답변일 때만 */
+export function canEditInquiry(user: { id: string }, inquiry: { authorId: string; answer: string | null }): boolean {
+  return inquiry.authorId === user.id && inquiry.answer === null;
+}
+
 /** 답변 이후 대화는 운영진과 작성자 본인만 이어 간다 */
 export function canReplyInquiry(user: { id: string; role: string }, inquiry: { authorId: string }): boolean {
   return isAdmin(user) || inquiry.authorId === user.id;

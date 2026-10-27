@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guards";
-import { canDeleteInquiry, canReplyInquiry, inquiryWhere, type InquiryScope } from "@/lib/inquiries/rules";
+import { canDeleteInquiry, canEditInquiry, canReplyInquiry, inquiryWhere, type InquiryScope } from "@/lib/inquiries/rules";
 import { cn } from "@/lib/utils/cn";
 import { InquiryCard } from "@/components/inquiries/InquiryCard";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
@@ -76,6 +76,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                 key={i.id}
                 isAdmin={isAdmin}
                 canDelete={canDeleteInquiry(user, i)}
+                canEdit={canEditInquiry(user, i)}
                 canReply={canReplyInquiry(user, i)}
                 item={{
                   id: i.id,

@@ -2,7 +2,7 @@
 
 import type { InquiryKind } from "@prisma/client";
 import { useActionState, useState } from "react";
-import { answerInquiry, deleteInquiry, replyInquiry } from "@/app/(dashboard)/inquiries/actions";
+import { answerInquiry, deleteInquiry, replyInquiry, updateInquiry } from "@/app/(dashboard)/inquiries/actions";
 import type { FormState } from "@/app/(dashboard)/projects/[id]/actions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,7 +10,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Field } from "@/components/ui/Field";
 import { Textarea } from "@/components/ui/Textarea";
 import { useRetainOnError } from "@/components/ui/useRetainOnError";
-import { INQUIRY_KIND_LABEL, INQUIRY_KIND_TONE } from "@/lib/inquiries/rules";
+import { INQUIRY_KIND_LABEL, INQUIRY_KIND_TONE, MAX_INQUIRY } from "@/lib/inquiries/rules";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/date";
 
@@ -31,14 +31,17 @@ export function InquiryCard({
   item,
   isAdmin,
   canDelete,
+  canEdit,
   canReply,
 }: {
   item: InquiryItem;
   isAdmin: boolean;
   canDelete: boolean;
+  canEdit: boolean;
   canReply: boolean;
 }) {
   const [answering, setAnswering] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState<FormState, FormData>(async (prev, fd) => {
     const r = await answerInquiry(item.id, prev, fd);
@@ -58,7 +61,11 @@ export function InquiryCard({
         </div>
         {item.needsAnswer && <Badge tone="amber">{item.answer ? "답변 대기" : "미답변"}</Badge>}
       </div>
-      <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{item.content}</p>
+      {editing ? (
+        <EditForm item={item} onDone={() => setEditing(false)} />
+      ) : (
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{item.content}</p>
+      )}
 
       {item.answer && !answering && (
         <div className="mt-3 rounded-md bg-navy-50 p-3">
@@ -106,11 +113,16 @@ export function InquiryCard({
         </form>
       )}
 
-      {(isAdmin || canDelete) && !answering && (
+      {(isAdmin || canDelete || canEdit) && !answering && !editing && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           {isAdmin && (
             <Button variant="text" size="sm" onClick={() => setAnswering(true)}>
               {item.answer ? "답변 수정" : "답변하기"}
+            </Button>
+          )}
+          {canEdit && (
+            <Button variant="text" size="sm" onClick={() => setEditing(true)}>
+              수정
             </Button>
           )}
           {canDelete && (
@@ -146,6 +158,40 @@ function ReplyForm({ inquiryId }: { inquiryId: string }) {
       <Button type="submit" size="sm" disabled={pending}>
         답글 달기
       </Button>
+    </form>
+  );
+}
+
+function EditForm({ item, onDone }: { item: InquiryItem; onDone: () => void }) {
+  const [state, formAction, pending] = useActionState<FormState, FormData>(async (prev, fd) => {
+    const r = await updateInquiry(item.id, prev, fd);
+    if (r.ok) onDone();
+    return r;
+  }, {});
+  const { formRef, submit } = useRetainOnError(formAction, state);
+
+  return (
+    <form ref={formRef} action={submit} className="space-y-2">
+      <Field id={`inq-edit-${item.id}`} label="문의 내용" error={state.fieldErrors?.content}>
+        <Textarea
+          id={`inq-edit-${item.id}`}
+          name="content"
+          rows={3}
+          maxLength={MAX_INQUIRY}
+          defaultValue={item.content}
+          autoFocus
+          required
+        />
+      </Field>
+      {state.error && <p className="text-xs text-red-700">{state.error}</p>}
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={pending}>
+          저장
+        </Button>
+        <Button variant="secondary" size="sm" disabled={pending} onClick={onDone}>
+          취소
+        </Button>
+      </div>
     </form>
   );
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/auth/guards";
 import { isAdmin } from "@/lib/auth/permissions";
-import { canDeleteInquiry, canReplyInquiry, parseInquiryKind, validateInquiryContent } from "@/lib/inquiries/rules";
+import { canDeleteInquiry, canEditInquiry, canReplyInquiry, parseInquiryKind, validateInquiryContent } from "@/lib/inquiries/rules";
 import { validateAnswer } from "@/lib/questions/rules";
 import type { FormState } from "@/app/(dashboard)/projects/[id]/actions";
 
@@ -36,6 +36,21 @@ export async function answerInquiry(inquiryId: string, _prev: FormState, fd: For
   if (count === 0) return { error: "문의를 찾을 수 없습니다" };
   revalidate();
   return {};
+}
+
+export async function updateInquiry(inquiryId: string, _prev: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const content = String(fd.get("content") ?? "");
+  const error = validateInquiryContent(content);
+  if (error) return { fieldErrors: { content: error } };
+  const inquiry = await db.inquiry.findUnique({ where: { id: inquiryId }, select: { authorId: true, answer: true } });
+  if (!inquiry) return { error: "문의를 찾을 수 없습니다" };
+  if (!canEditInquiry(user, inquiry)) return { error: "수정할 수 없는 문의입니다" };
+  // 확인과 수정 사이에 답변이 달리면 수정하지 않는다
+  const { count } = await db.inquiry.updateMany({ where: { id: inquiryId, answer: null }, data: { content: content.trim() } });
+  if (count === 0) return { error: "이미 답변이 달려 수정할 수 없습니다" };
+  revalidate();
+  return { ok: true };
 }
 
 export async function replyInquiry(inquiryId: string, _prev: FormState, fd: FormData): Promise<FormState> {

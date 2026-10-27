@@ -4,6 +4,7 @@ import {
   INQUIRY_KIND_LABEL,
   INQUIRY_KIND_TONE,
   canDeleteInquiry,
+  canEditInquiry,
   canReplyInquiry,
   inquiryWhere,
   parseInquiryKind,
@@ -51,6 +52,17 @@ describe("canDeleteInquiry", () => {
 
   it("남의 문의는 삭제할 수 없다", () => {
     expect(canDeleteInquiry(other, { authorId: "m1", answer: null })).toBe(false);
+  });
+});
+
+describe("canEditInquiry", () => {
+  it("작성자 본인만, 답변이 달리기 전까지 수정할 수 있다", () => {
+    expect(canEditInquiry(member, { authorId: "m1", answer: null })).toBe(true);
+    expect(canEditInquiry(member, { authorId: "m1", answer: "답" })).toBe(false);
+  });
+
+  it("운영진도 남의 문의는 수정할 수 없다", () => {
+    expect(canEditInquiry(admin, { authorId: "m1", answer: null })).toBe(false);
   });
 });
 
