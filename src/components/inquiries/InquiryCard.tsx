@@ -222,7 +222,7 @@ function Post({
           >
             <MoreVertical size={16} strokeWidth={1.75} aria-hidden />
           </summary>
-          <div className="absolute right-0 z-10 mt-1 flex w-28 flex-col gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+          <div className="absolute right-0 z-10 mt-1 flex w-max flex-col gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-md">
             <Button variant="soft" size="sm" onClick={() => setEditing(true)}>
               수정
             </Button>
