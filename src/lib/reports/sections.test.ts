@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSections } from "./sections";
+import { buildSections, reportTargets } from "./sections";
 
 const p = (id: string, status: "IN_PROGRESS" | "DONE" | "UNASSIGNED") => ({ id, status });
 
@@ -33,5 +33,34 @@ describe("buildSections", () => {
     const s = buildSections([], new Set());
     expect(s).toHaveLength(3);
     expect(s.every((x) => x.rows.length === 0 && x.total === 0)).toBe(true);
+  });
+
+  it("진행 중에 주요 프로젝트가 있으면 주요 프로젝트만 보여주고 제출 수도 그 안에서 센다", () => {
+    const s = buildSections(
+      [p("a", "IN_PROGRESS"), { ...p("b", "IN_PROGRESS"), featured: true }, { ...p("c", "IN_PROGRESS"), featured: true }],
+      new Set(["a", "b"]),
+    );
+    expect(s[0].rows.map((r) => r.project.id)).toEqual(["b", "c"]);
+    expect(s[0].submitted).toBe(1);
+    expect(s[0].total).toBe(2);
+  });
+
+  it("진행 중에 주요 프로젝트가 없으면 전부 보여준다", () => {
+    const s = buildSections([p("a", "IN_PROGRESS"), p("b", "IN_PROGRESS")], new Set());
+    expect(s[0].rows.map((r) => r.project.id)).toEqual(["a", "b"]);
+  });
+
+  it("완료·미배치 섹션은 주요 여부로 거르지 않는다", () => {
+    const s = buildSections([p("a", "DONE"), { ...p("b", "DONE"), featured: true }], new Set());
+    expect(s[1].rows.map((r) => r.project.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("reportTargets", () => {
+  it("주요 프로젝트가 있으면 그것만", () => {
+    expect(reportTargets([{ id: "a" }, { id: "b", featured: true }]).map((p) => p.id)).toEqual(["b"]);
+  });
+  it("없으면 전부", () => {
+    expect(reportTargets([{ id: "a" }, { id: "b", featured: false }]).map((p) => p.id)).toEqual(["a", "b"]);
   });
 });

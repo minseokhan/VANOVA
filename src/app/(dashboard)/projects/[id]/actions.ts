@@ -121,6 +121,14 @@ export async function addPlanDoc(
   return {};
 }
 
+/** 주요 프로젝트 지정/해제. 운영진 전용 */
+export async function setProjectFeatured(projectId: string, featured: boolean): Promise<void> {
+  await requireAdmin();
+  await db.project.update({ where: { id: projectId }, data: { featured } });
+  revalidate(projectId);
+  revalidatePath("/reports");
+}
+
 /** FILE이면 Blob 삭제도 시도하되, 실패해도 DB 삭제는 진행 */
 export async function deletePlanDoc(projectId: string, planDocId: string): Promise<{ error?: string }> {
   await requireAdmin();
