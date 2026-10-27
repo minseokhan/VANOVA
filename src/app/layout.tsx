@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VAN AI 혁신부 대시보드",
-  description: "AI 혁신부 프로젝트 배치·진행·주간 보고 관리",
+  title: "VANOVA",
+  description: "VAN AI 혁신부 프로젝트 배치·진행·주간 보고 관리",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
