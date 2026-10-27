@@ -32,14 +32,17 @@ const ADMIN: Item[] = [
 export function Sidebar({
   user,
   pendingCount,
+  inquiryCount,
   onNavigate,
 }: {
   user: SessionUser;
   pendingCount: number;
+  inquiryCount: number;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const isAdmin = user.role === "ADMIN";
+  const counts: Record<string, number> = { "/members": pendingCount, "/inquiries": inquiryCount };
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   const renderItem = ({ href, label, icon: Icon }: Item) => (
@@ -56,9 +59,9 @@ export function Sidebar({
     >
       <Icon size={16} strokeWidth={1.75} aria-hidden />
       <span className="flex-1">{label}</span>
-      {href === "/members" && pendingCount > 0 && (
+      {(counts[href] ?? 0) > 0 && (
         <span className="rounded bg-navy-100 px-1.5 py-0.5 text-xs font-medium tabular-nums text-navy-700">
-          {pendingCount}
+          {counts[href]}
         </span>
       )}
     </Link>

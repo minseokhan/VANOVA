@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guards";
-import { canDeleteInquiry, inquiryWhere, type InquiryScope } from "@/lib/inquiries/rules";
+import { canDeleteInquiry, canEditInquiry, canModifyPost, canReplyInquiry, inquiryWhere, type InquiryScope } from "@/lib/inquiries/rules";
 import { cn } from "@/lib/utils/cn";
 import { InquiryCard } from "@/components/inquiries/InquiryCard";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
@@ -26,7 +26,11 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
       where: inquiryWhere(scope, user.id),
       orderBy: { createdAt: "desc" },
       take: 200,
-      include: { author: { select: { name: true } }, answeredBy: { select: { name: true } } },
+      include: {
+        author: { select: { name: true } },
+        answeredBy: { select: { name: true } },
+        replies: { orderBy: { createdAt: "asc" }, include: { author: { select: { name: true, role: true } } } },
+      },
     }),
     db.inquiry.count({ where: { answer: null } }),
   ]);
@@ -72,6 +76,8 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                 key={i.id}
                 isAdmin={isAdmin}
                 canDelete={canDeleteInquiry(user, i)}
+                canEdit={canEditInquiry(user, i)}
+                canReply={canReplyInquiry(user, i)}
                 item={{
                   id: i.id,
                   kind: i.kind,
@@ -81,6 +87,15 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                   answer: i.answer,
                   answererName: i.answeredBy?.name ?? null,
                   answeredAt: i.answeredAt,
+                  answerMine: canModifyPost(user, i.answeredById),
+                  replies: i.replies.map((r) => ({
+                    id: r.id,
+                    authorName: r.author.name,
+                    fromAdmin: r.author.role === "ADMIN",
+                    mine: canModifyPost(user, r.authorId),
+                    content: r.content,
+                    createdAt: r.createdAt,
+                  })),
                 }}
               />
             ))}

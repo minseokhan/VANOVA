@@ -5,7 +5,15 @@ import { Menu, X } from "lucide-react";
 import type { SessionUser } from "@/lib/auth/session";
 import { Sidebar } from "./Sidebar";
 
-export function MobileHeader({ user, pendingCount }: { user: SessionUser; pendingCount: number }) {
+export function MobileHeader({
+  user,
+  pendingCount,
+  inquiryCount,
+}: {
+  user: SessionUser;
+  pendingCount: number;
+  inquiryCount: number;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -25,7 +33,7 @@ export function MobileHeader({ user, pendingCount }: { user: SessionUser; pendin
         <div className="fixed inset-0 z-40 lg:hidden">
           <button type="button" aria-label="메뉴 닫기" onClick={() => setOpen(false)} className="absolute inset-0 bg-slate-900/50" />
           <div className="absolute inset-y-0 left-0">
-            <Sidebar user={user} pendingCount={pendingCount} onNavigate={() => setOpen(false)} />
+            <Sidebar user={user} pendingCount={pendingCount} inquiryCount={inquiryCount} onNavigate={() => setOpen(false)} />
           </div>
           <button
             type="button"
