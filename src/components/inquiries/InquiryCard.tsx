@@ -2,7 +2,7 @@
 
 import type { InquiryKind } from "@prisma/client";
 import { useActionState, useState } from "react";
-import { answerInquiry, deleteInquiry } from "@/app/(dashboard)/inquiries/actions";
+import { answerInquiry, deleteInquiry, replyInquiry } from "@/app/(dashboard)/inquiries/actions";
 import type { FormState } from "@/app/(dashboard)/projects/[id]/actions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,7 @@ import { Field } from "@/components/ui/Field";
 import { Textarea } from "@/components/ui/Textarea";
 import { useRetainOnError } from "@/components/ui/useRetainOnError";
 import { INQUIRY_KIND_LABEL, INQUIRY_KIND_TONE } from "@/lib/inquiries/rules";
+import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/date";
 
 export type InquiryItem = {
@@ -22,9 +23,21 @@ export type InquiryItem = {
   answer: string | null;
   answererName: string | null;
   answeredAt: Date | null;
+  needsAnswer: boolean;
+  replies: { id: string; authorName: string; fromAdmin: boolean; content: string; createdAt: Date }[];
 };
 
-export function InquiryCard({ item, isAdmin, canDelete }: { item: InquiryItem; isAdmin: boolean; canDelete: boolean }) {
+export function InquiryCard({
+  item,
+  isAdmin,
+  canDelete,
+  canReply,
+}: {
+  item: InquiryItem;
+  isAdmin: boolean;
+  canDelete: boolean;
+  canReply: boolean;
+}) {
   const [answering, setAnswering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState<FormState, FormData>(async (prev, fd) => {
@@ -43,7 +56,7 @@ export function InquiryCard({ item, isAdmin, canDelete }: { item: InquiryItem; i
             {item.authorName} · {formatDate(item.createdAt)}
           </span>
         </div>
-        {!item.answer && <Badge tone="amber">미답변</Badge>}
+        {item.needsAnswer && <Badge tone="amber">{item.answer ? "답변 대기" : "미답변"}</Badge>}
       </div>
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{item.content}</p>
 
@@ -55,6 +68,18 @@ export function InquiryCard({ item, isAdmin, canDelete }: { item: InquiryItem; i
           </p>
         </div>
       )}
+
+      {item.answer &&
+        item.replies.map((r) => (
+          <div key={r.id} className={cn("mt-2 rounded-md p-3", r.fromAdmin ? "bg-navy-50" : "ml-6 border border-slate-200")}>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{r.content}</p>
+            <p className="mt-2 text-xs text-slate-500">
+              {r.authorName} · {formatDate(r.createdAt)}
+            </p>
+          </div>
+        ))}
+
+      {item.answer && canReply && !answering && <ReplyForm inquiryId={item.id} />}
 
       {answering && (
         <form ref={formRef} action={submit} className="mt-3 space-y-2">
@@ -102,5 +127,25 @@ export function InquiryCard({ item, isAdmin, canDelete }: { item: InquiryItem; i
         </div>
       )}
     </li>
+  );
+}
+
+function ReplyForm({ inquiryId }: { inquiryId: string }) {
+  const [state, formAction, pending] = useActionState<FormState, FormData>(
+    (prev, fd) => replyInquiry(inquiryId, prev, fd),
+    {},
+  );
+  const { formRef, submit } = useRetainOnError(formAction, state);
+
+  return (
+    <form ref={formRef} action={submit} className="mt-3 space-y-2">
+      <Field id={`inq-reply-${inquiryId}`} label="답글" error={state.fieldErrors?.content}>
+        <Textarea id={`inq-reply-${inquiryId}`} name="content" rows={2} maxLength={4000} required />
+      </Field>
+      {state.error && <p className="text-xs text-red-700">{state.error}</p>}
+      <Button type="submit" size="sm" disabled={pending}>
+        답글 달기
+      </Button>
+    </form>
   );
 }

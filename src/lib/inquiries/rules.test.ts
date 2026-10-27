@@ -4,6 +4,7 @@ import {
   INQUIRY_KIND_LABEL,
   INQUIRY_KIND_TONE,
   canDeleteInquiry,
+  canReplyInquiry,
   inquiryWhere,
   parseInquiryKind,
   validateInquiryContent,
@@ -53,6 +54,14 @@ describe("canDeleteInquiry", () => {
   });
 });
 
+describe("canReplyInquiry", () => {
+  it("운영진과 작성자 본인만 이어서 답글을 달 수 있다", () => {
+    expect(canReplyInquiry(admin, { authorId: "m1" })).toBe(true);
+    expect(canReplyInquiry(member, { authorId: "m1" })).toBe(true);
+    expect(canReplyInquiry(other, { authorId: "m1" })).toBe(false);
+  });
+});
+
 describe("inquiryWhere", () => {
   it("ALL은 조건 없음", () => {
     expect(inquiryWhere("ALL", "m1")).toEqual({});
@@ -62,8 +71,8 @@ describe("inquiryWhere", () => {
     expect(inquiryWhere("MINE", "m1")).toEqual({ authorId: "m1" });
   });
 
-  it("UNANSWERED는 미답변", () => {
-    expect(inquiryWhere("UNANSWERED", "m1")).toEqual({ answer: null });
+  it("UNANSWERED는 운영진 답변 대기(후속 댓글 포함)", () => {
+    expect(inquiryWhere("UNANSWERED", "m1")).toEqual({ needsAnswer: true });
   });
 });
 

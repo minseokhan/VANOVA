@@ -87,6 +87,7 @@ model User {
   reportNotes      ReportNote[]
   inquiries        Inquiry[]       @relation("InquiryAuthor")
   inquiryAnswers   Inquiry[]       @relation("InquiryAnsweredBy")
+  inquiryReplies   InquiryReply[]
   expenses         ExpenseClaim[]
   notices          Notice[]
   meetingMinutes   MeetingMinute[]
@@ -180,7 +181,9 @@ model ProfileLink {
   @@index([userId])
 }
 
-/** 주차별 운영진 총평·특이사항. 한 주에 하나 */
+/**
+ * 주차별 운영진 총평·특이사항. 한 주에 하나
+ */
 model ReportNote {
   weekStart DateTime @id @db.Date
   authorId  String
@@ -205,7 +208,9 @@ model PlanDoc {
   @@index([projectId])
 }
 
-/** 사이트 자체에 대한 문의·건의. 프로젝트와 무관하며 운영진·부원 모두 남길 수 있다 */
+/**
+ * 사이트 자체에 대한 문의·건의. 프로젝트와 무관하며 운영진·부원 모두 남길 수 있다
+ */
 model Inquiry {
   id           String      @id @default(cuid())
   authorId     String
@@ -214,15 +219,38 @@ model Inquiry {
   answer       String?
   answeredById String?
   answeredAt   DateTime?
+  /**
+   * 운영진 응답 대기 — 새 문의·작성자 후속 답글이면 true, 운영진이 답하면 false. 사이드바 숫자의 근거
+   */
+  needsAnswer  Boolean     @default(true)
   createdAt    DateTime    @default(now())
 
-  author     User  @relation("InquiryAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  answeredBy User? @relation("InquiryAnsweredBy", fields: [answeredById], references: [id], onDelete: SetNull)
+  author     User           @relation("InquiryAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  answeredBy User?          @relation("InquiryAnsweredBy", fields: [answeredById], references: [id], onDelete: SetNull)
+  replies    InquiryReply[]
 
   @@index([createdAt])
 }
 
-/** 개인 비용 청구 한 건. 여러 건을 한 달에 나눠 등록한다 */
+/**
+ * 첫 답변 이후 운영진·작성자가 이어 다는 답글
+ */
+model InquiryReply {
+  id        String   @id @default(cuid())
+  inquiryId String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId])
+}
+
+/**
+ * 개인 비용 청구 한 건. 여러 건을 한 달에 나눠 등록한다
+ */
 model ExpenseClaim {
   id         String      @id @default(cuid())
   userId     String
