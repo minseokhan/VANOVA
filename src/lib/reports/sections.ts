@@ -7,6 +7,14 @@ const ORDER: { key: ProjectStatus; label: string }[] = [
   { key: "UNASSIGNED", label: "미배치" },
 ];
 
+/**
+ * 주간 보고 대상이 되는 진행 중 프로젝트. 주요 프로젝트(featured)가 하나라도 있으면 그것만,
+ * 아무것도 지정하지 않았으면 전부. 보고 화면과 디스코드 독촉이 같은 기준을 쓴다
+ */
+export function reportTargets<P extends { featured?: boolean }>(inProgress: P[]): P[] {
+  return inProgress.some((p) => p.featured) ? inProgress.filter((p) => p.featured) : inProgress;
+}
+
 export type SectionRow<P> = { project: P; submitted: boolean };
 export type Section<P> = {
   key: ProjectStatus;
@@ -18,17 +26,15 @@ export type Section<P> = {
 
 /**
  * 프로젝트를 상태별 3개 섹션으로 나눈다. 미배치는 제출 주체가 없어 제출 수를 세지 않는다.
- * 진행 중에 주요 프로젝트(featured)가 하나라도 있으면 진행 중 섹션은 주요 프로젝트만 보여준다.
- * 아무것도 지정하지 않았으면 섹션이 비지 않도록 전부 보여준다
+ * 진행 중 섹션은 reportTargets 기준(주요 프로젝트가 있으면 그것만)으로 보여준다
  */
 export function buildSections<P extends { id: string; status: ProjectStatus; featured?: boolean }>(
   projects: P[],
   submittedIds: Set<string>,
 ): Section<P>[] {
-  const hasFeatured = projects.some((p) => p.status === "IN_PROGRESS" && p.featured);
   return ORDER.map(({ key, label }) => {
-    const rows = projects
-      .filter((p) => p.status === key && (key !== "IN_PROGRESS" || !hasFeatured || p.featured))
+    const inSection = projects.filter((p) => p.status === key);
+    const rows = (key === "IN_PROGRESS" ? reportTargets(inSection) : inSection)
       .map((project) => ({ project, submitted: key !== "UNASSIGNED" && submittedIds.has(project.id) }));
     return { key, label, rows, submitted: rows.filter((r) => r.submitted).length, total: rows.length };
   });

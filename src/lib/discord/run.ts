@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { reportTargets } from "@/lib/reports/sections";
 import { formatWeekLabel } from "@/lib/utils/week";
 import { buildDigestMessages } from "./digest";
 import { buildReminderMessages } from "./remind";
@@ -39,15 +40,21 @@ export async function runDigest(now: Date = new Date()): Promise<{ sent: number;
 const DEADLINE = "일요일 23:59";
 
 /**
- * 그 주 주간보고를 내지 않은 진행 중 프로젝트의 독촉 메시지.
+ * 그 주 주간보고를 내지 않은 보고 대상 프로젝트(reportTargets)의 독촉 메시지.
  * 미리보기와 실제 전송이 같은 문구가 되도록 양쪽 모두 이 함수를 쓴다.
  */
 export async function buildWeeklyReminder(weekStart: Date): Promise<{ messages: string[]; teams: number }> {
-  const projects = await db.project.findMany({
-    where: { status: "IN_PROGRESS", weeklyUpdates: { none: { weekStart } } },
+  const inProgress = await db.project.findMany({
+    where: { status: "IN_PROGRESS" },
     orderBy: { code: "asc" },
-    select: { id: true, code: true, title: true, members: { select: { user: { select: { name: true } } } } },
+    select: {
+      id: true, code: true, title: true, featured: true,
+      weeklyUpdates: { where: { weekStart }, select: { id: true }, take: 1 },
+      members: { select: { user: { select: { name: true } } } },
+    },
   });
+  // 주요 여부는 제출 전 전체 진행 중 목록에서 판단해야, 주요가 다 제출했을 때 일반 프로젝트로 넘어가지 않는다
+  const projects = reportTargets(inProgress).filter((p) => p.weeklyUpdates.length === 0);
 
   const baseUrl = process.env.APP_BASE_URL || `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   const messages = buildReminderMessages(

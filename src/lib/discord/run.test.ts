@@ -73,7 +73,10 @@ describe("runWeeklyReminder", () => {
 
   beforeEach(() => {
     projectFindMany.mockReset().mockResolvedValue([
-      { id: "p1", code: "1-1", title: "카드뉴스", members: [{ user: { name: "홍길동" } }, { user: { name: "한민석" } }] },
+      {
+        id: "p1", code: "1-1", title: "카드뉴스", featured: false, weeklyUpdates: [],
+        members: [{ user: { name: "홍길동" } }, { user: { name: "한민석" } }],
+      },
     ]);
   });
 
@@ -83,12 +86,37 @@ describe("runWeeklyReminder", () => {
     expect(projectFindMany).not.toHaveBeenCalled();
   });
 
-  it("진행 중이면서 그 주 보고가 없는 프로젝트만 조회한다", async () => {
+  it("진행 중 프로젝트를 그 주 보고와 함께 조회한다", async () => {
     await runWeeklyReminder(week);
-    expect(projectFindMany.mock.calls[0][0].where).toEqual({
-      status: "IN_PROGRESS",
-      weeklyUpdates: { none: { weekStart: week } },
-    });
+    const arg = projectFindMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ status: "IN_PROGRESS" });
+    expect(arg.select.weeklyUpdates).toEqual({ where: { weekStart: week }, select: { id: true }, take: 1 });
+  });
+
+  it("그 주 보고를 이미 낸 프로젝트는 독촉하지 않는다", async () => {
+    projectFindMany.mockResolvedValue([
+      { id: "p1", code: "1-1", title: "A", featured: false, weeklyUpdates: [{ id: "w" }], members: [{ user: { name: "홍길동" } }] },
+    ]);
+    expect(await runWeeklyReminder(week)).toEqual({ sent: 0 });
+  });
+
+  it("주요 프로젝트가 있으면 주요 프로젝트만 독촉한다", async () => {
+    projectFindMany.mockResolvedValue([
+      { id: "p1", code: "1-1", title: "일반", featured: false, weeklyUpdates: [], members: [{ user: { name: "홍길동" } }] },
+      { id: "p2", code: "2-4", title: "주요", featured: true, weeklyUpdates: [], members: [{ user: { name: "박" } }] },
+    ]);
+    expect(await runWeeklyReminder(week)).toEqual({ sent: 1 });
+    const text = sendWebhook.mock.calls[0][1].join("\n");
+    expect(text).toContain("[2-4] 주요");
+    expect(text).not.toContain("[1-1] 일반");
+  });
+
+  it("주요 프로젝트가 모두 제출했으면 일반 프로젝트로 넘어가지 않고 보내지 않는다", async () => {
+    projectFindMany.mockResolvedValue([
+      { id: "p1", code: "1-1", title: "일반", featured: false, weeklyUpdates: [], members: [{ user: { name: "홍길동" } }] },
+      { id: "p2", code: "2-4", title: "주요", featured: true, weeklyUpdates: [{ id: "w" }], members: [{ user: { name: "박" } }] },
+    ]);
+    expect(await runWeeklyReminder(week)).toEqual({ sent: 0 });
   });
 
   it("미제출 팀을 @이름으로 부르는 메시지를 보낸다", async () => {

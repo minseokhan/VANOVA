@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSections } from "./sections";
+import { buildSections, reportTargets } from "./sections";
 
 const p = (id: string, status: "IN_PROGRESS" | "DONE" | "UNASSIGNED") => ({ id, status });
 
@@ -53,5 +53,14 @@ describe("buildSections", () => {
   it("완료·미배치 섹션은 주요 여부로 거르지 않는다", () => {
     const s = buildSections([p("a", "DONE"), { ...p("b", "DONE"), featured: true }], new Set());
     expect(s[1].rows.map((r) => r.project.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("reportTargets", () => {
+  it("주요 프로젝트가 있으면 그것만", () => {
+    expect(reportTargets([{ id: "a" }, { id: "b", featured: true }]).map((p) => p.id)).toEqual(["b"]);
+  });
+  it("없으면 전부", () => {
+    expect(reportTargets([{ id: "a" }, { id: "b", featured: false }]).map((p) => p.id)).toEqual(["a", "b"]);
   });
 });
