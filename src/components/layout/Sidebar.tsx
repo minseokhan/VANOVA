@@ -68,7 +68,7 @@ export function Sidebar({
   return (
     <aside className="flex h-full w-60 flex-col bg-navy-900 text-white">
       <div className="px-5 py-5">
-        <Image src="/brand/vanova-wordmark-dark.png" alt="VANOVA" width={121} height={24} priority />
+        <Image src="/brand/vanova-logo-dark.png" alt="VANOVA 한국대학 학회·학술 총연합체" width={200} height={49} priority />
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {(isAdmin ? MAIN : [MAIN[0], NOTICE, ...MAIN.slice(1)]).map(renderItem)}
