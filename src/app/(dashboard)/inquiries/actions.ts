@@ -1,10 +1,14 @@
 "use server";
 
+import type { InquiryKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/auth/guards";
 import { canDeleteInquiry, canEditInquiry, canModifyPost, canReplyInquiry, parseInquiryKind, validateInquiryContent } from "@/lib/inquiries/rules";
 import { validateAnswer } from "@/lib/questions/rules";
+import { buildInquiryNotice } from "@/lib/inquiries/notify";
+import { sendWebhook } from "@/lib/discord/webhook";
 import type { FormState } from "@/app/(dashboard)/projects/[id]/actions";
 
 function revalidate() {
@@ -20,7 +24,21 @@ export async function createInquiry(_prev: FormState, fd: FormData): Promise<For
   if (error) return { fieldErrors: { content: error } };
   await db.inquiry.create({ data: { authorId: user.id, kind, content: content.trim() } });
   revalidate();
+  // 응답을 보낸 뒤 전송한다. 디스코드가 실패해도 문의 등록은 성공으로 둔다
+  after(() => notifyInquiry({ kind, authorName: user.name, content }));
   return { ok: true };
+}
+
+async function notifyInquiry(p: { kind: InquiryKind; authorName: string; content: string }) {
+  const url = process.env.DISCORD_INQUIRY_WEBHOOK_URL;
+  if (!url) return;
+  const userId = process.env.DISCORD_INQUIRY_USER_ID || undefined;
+  const baseUrl = process.env.APP_BASE_URL || `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  try {
+    await sendWebhook(url, buildInquiryNotice({ ...p, baseUrl, userId }), undefined, userId ? [userId] : undefined);
+  } catch (e) {
+    console.error("[inquiry] discord notify failed", e);
+  }
 }
 
 export async function answerInquiry(inquiryId: string, _prev: FormState, fd: FormData): Promise<FormState> {
