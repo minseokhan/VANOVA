@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { setProjectStatus } from "./actions";
+import { setProjectFeatured, setProjectStatus } from "./actions";
 
 const linkClass = "text-navy-500 hover:underline break-all";
 
@@ -79,6 +79,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     "use server";
     await setProjectStatus(id, target);
   };
+  const toggleFeatured = async () => {
+    "use server";
+    await setProjectFeatured(id, !project.featured);
+  };
 
   return (
     <div className="space-y-8">
@@ -88,6 +92,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             <p className="text-xs text-slate-500">{project.code}</p>
             <h1 className="text-2xl font-semibold text-slate-900">{project.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {project.featured && <Badge tone="solid">주요</Badge>}
               <Badge tone={STATUS_TONE[project.status]}>{STATUS_LABEL[project.status]}</Badge>
               <Badge tone={PRIORITY_TONE[project.priority]}>{PRIORITY_LABEL[project.priority] ?? project.priority}</Badge>
               <Badge>{project.category}</Badge>
@@ -98,6 +103,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <form action={transition}>
                 <Button type="submit" variant="secondary">
                   {target === "DONE" ? "완료로 표시" : "진행중으로 되돌리기"}
+                </Button>
+              </form>
+            )}
+            {user.role === "ADMIN" && (
+              <form action={toggleFeatured}>
+                <Button type="submit" variant="secondary">
+                  {project.featured ? "주요 프로젝트 해제" : "주요 프로젝트로 지정"}
                 </Button>
               </form>
             )}

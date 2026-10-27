@@ -4,6 +4,7 @@ const VARIANT = {
   primary: "rounded-md bg-navy-700 text-white font-medium hover:bg-navy-900",
   secondary: "rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
   danger: "rounded-md bg-red-50 text-red-700 font-medium hover:bg-red-100",
+  soft: "rounded-md bg-navy-50 text-navy-700 font-medium hover:bg-navy-100",
   text: "text-navy-500 hover:underline",
 } as const;
 

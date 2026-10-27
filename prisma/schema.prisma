@@ -87,6 +87,7 @@ model User {
   reportNotes      ReportNote[]
   inquiries        Inquiry[]       @relation("InquiryAuthor")
   inquiryAnswers   Inquiry[]       @relation("InquiryAnsweredBy")
+  inquiryReplies   InquiryReply[]
   expenses         ExpenseClaim[]
   notices          Notice[]
   meetingMinutes   MeetingMinute[]
@@ -102,6 +103,8 @@ model Project {
   summary      String
   description  String
   status       ProjectStatus @default(UNASSIGNED)
+  /// 운영진이 지정한 주요 프로젝트. 대시보드·주간 보고에서 맨 위에 보인다
+  featured     Boolean       @default(false)
   githubUrl    String?
   deployUrl    String?
   mainLanguage String?
@@ -178,7 +181,9 @@ model ProfileLink {
   @@index([userId])
 }
 
-/** 주차별 운영진 총평·특이사항. 한 주에 하나 */
+/**
+ * 주차별 운영진 총평·특이사항. 한 주에 하나
+ */
 model ReportNote {
   weekStart DateTime @id @db.Date
   authorId  String
@@ -203,7 +208,9 @@ model PlanDoc {
   @@index([projectId])
 }
 
-/** 사이트 자체에 대한 문의·건의. 프로젝트와 무관하며 운영진·부원 모두 남길 수 있다 */
+/**
+ * 사이트 자체에 대한 문의·건의. 프로젝트와 무관하며 운영진·부원 모두 남길 수 있다
+ */
 model Inquiry {
   id           String      @id @default(cuid())
   authorId     String
@@ -214,13 +221,32 @@ model Inquiry {
   answeredAt   DateTime?
   createdAt    DateTime    @default(now())
 
-  author     User  @relation("InquiryAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  answeredBy User? @relation("InquiryAnsweredBy", fields: [answeredById], references: [id], onDelete: SetNull)
+  author     User           @relation("InquiryAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  answeredBy User?          @relation("InquiryAnsweredBy", fields: [answeredById], references: [id], onDelete: SetNull)
+  replies    InquiryReply[]
 
   @@index([createdAt])
 }
 
-/** 개인 비용 청구 한 건. 여러 건을 한 달에 나눠 등록한다 */
+/**
+ * 첫 답변 이후 운영진·작성자가 이어 다는 답글
+ */
+model InquiryReply {
+  id        String   @id @default(cuid())
+  inquiryId String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId])
+}
+
+/**
+ * 개인 비용 청구 한 건. 여러 건을 한 달에 나눠 등록한다
+ */
 model ExpenseClaim {
   id         String      @id @default(cuid())
   userId     String

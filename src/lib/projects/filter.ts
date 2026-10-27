@@ -24,16 +24,17 @@ export function myProjectIds(projects: { id: string; members: { id: string }[] }
 }
 
 /**
- * mine이 주어지면 그 집합에 속한 프로젝트를 먼저,
+ * 주요 프로젝트(featured)를 맨 먼저, 그다음 mine이 주어지면 그 집합에 속한 프로젝트를 먼저,
  * 그다음 진행중 → 미배정 → 완료, 같은 상태는 priorityRank 오름차순, 그다음 code 자연 정렬
  */
-export function sortProjects<T extends { id: string; status: ProjectStatus; priority: string; code: string }>(
+export function sortProjects<T extends { id: string; status: ProjectStatus; priority: string; code: string; featured?: boolean }>(
   projects: T[],
   myIds?: ReadonlySet<string>,
 ): T[] {
   const mine = (p: T) => (myIds?.has(p.id) ? 0 : 1);
   return [...projects].sort(
     (a, b) =>
+      Number(!!b.featured) - Number(!!a.featured) ||
       mine(a) - mine(b) ||
       STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
       priorityRank(a.priority) - priorityRank(b.priority) ||

@@ -1,4 +1,4 @@
-# 프로젝트: VAN AI 혁신부 업무 대시보드
+# 프로젝트: VANOVA (VAN AI 혁신부 업무 대시보드)
 
 VAN 학회 AI 혁신부 운영진·부원이 프로젝트 배치, 진행 상황, 주간 보고, 기획 질문을 한곳에서 관리하는 웹 대시보드.
 
@@ -48,7 +48,7 @@ python3 scripts/execute.py <phase-dir> [--push]   # phase의 step을 순차 실�
 python3 -m pytest scripts/test_execute.py         # 하네스 테스트
 
 ## Git / 이슈 워크플로우
-- 원격: https://github.com/minseokhan/VAN_AI_INNOVATION_WORK_DASHBOARD
+- 원격: https://github.com/minseokhan/VANOVA
 - Linear: https://linear.app/ai-agent-study/team/V/overview (팀 키 `V`, 팀명 VAN_AI_INNOVATION_WORK_DASHBOARD)
 - 브랜치: `main`(배포) ← `dev`(통합) ← `feat/V-<번호>-<slug>`(기능). 기능 브랜치는 항상 `dev`에서 분기한다.
 - CRITICAL: 기능 단위 작업은 사용자가 요청하지 않아도 Claude가 먼저 아래 전체 사이클을 **한 번에** 제안하고 실행한다. 단계별로 따로 물어보지 않는다.

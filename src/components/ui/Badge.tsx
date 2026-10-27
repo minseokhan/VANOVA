@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils/cn";
 
-export type BadgeTone = "neutral" | "navy" | "green" | "amber" | "red" | "orange" | "yellow" | "sky" | "teal";
+export type BadgeTone = "neutral" | "navy" | "green" | "amber" | "red" | "orange" | "yellow" | "sky" | "teal" | "solid";
 
 const TONE: Record<BadgeTone, string> = {
   neutral: "bg-slate-100 text-slate-600",
@@ -12,6 +12,7 @@ const TONE: Record<BadgeTone, string> = {
   yellow: "bg-yellow-100 text-yellow-700",
   sky: "bg-sky-100 text-sky-700",
   teal: "bg-teal-100 text-teal-700",
+  solid: "bg-navy-700 text-white",
 };
 
 export function Badge({

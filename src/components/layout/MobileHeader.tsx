@@ -1,16 +1,25 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import type { SessionUser } from "@/lib/auth/session";
 import { Sidebar } from "./Sidebar";
 
-export function MobileHeader({ user, pendingCount }: { user: SessionUser; pendingCount: number }) {
+export function MobileHeader({
+  user,
+  pendingCount,
+  inquiryCount,
+}: {
+  user: SessionUser;
+  pendingCount: number;
+  inquiryCount: number;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <header className="no-print flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
-        <span className="text-base font-semibold text-slate-900">VAN AI 혁신부</span>
+        <Image src="/brand/vanova-wordmark.png" alt="VANOVA" width={102} height={20} priority />
         <button
           type="button"
           aria-label="메뉴 열기"
@@ -25,7 +34,7 @@ export function MobileHeader({ user, pendingCount }: { user: SessionUser; pendin
         <div className="fixed inset-0 z-40 lg:hidden">
           <button type="button" aria-label="메뉴 닫기" onClick={() => setOpen(false)} className="absolute inset-0 bg-slate-900/50" />
           <div className="absolute inset-y-0 left-0">
-            <Sidebar user={user} pendingCount={pendingCount} onNavigate={() => setOpen(false)} />
+            <Sidebar user={user} pendingCount={pendingCount} inquiryCount={inquiryCount} onNavigate={() => setOpen(false)} />
           </div>
           <button
             type="button"
