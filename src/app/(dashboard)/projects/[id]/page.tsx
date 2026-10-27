@@ -92,7 +92,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             <p className="text-xs text-slate-500">{project.code}</p>
             <h1 className="text-2xl font-semibold text-slate-900">{project.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {project.featured && <Badge tone="navy">주요</Badge>}
+              {project.featured && <Badge tone="solid">주요</Badge>}
               <Badge tone={STATUS_TONE[project.status]}>{STATUS_LABEL[project.status]}</Badge>
               <Badge tone={PRIORITY_TONE[project.priority]}>{PRIORITY_LABEL[project.priority] ?? project.priority}</Badge>
               <Badge>{project.category}</Badge>

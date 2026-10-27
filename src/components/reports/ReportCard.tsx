@@ -30,7 +30,7 @@ function Title({ project }: { project: ReportCardProject }) {
       <Link href={`/projects/${project.id}`} className="min-w-0 truncate text-sm font-medium text-slate-900 hover:underline">
         <span className="tabular-nums text-slate-500">{project.code}</span> {project.title}
       </Link>
-      {project.featured && <Badge tone="navy">주요</Badge>}
+      {project.featured && <Badge tone="solid">주요</Badge>}
     </>
   );
 }

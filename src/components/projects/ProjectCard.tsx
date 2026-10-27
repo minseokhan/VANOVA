@@ -18,7 +18,7 @@ export function ProjectCard({ project: p }: { project: ProjectCardData }) {
     <Card href={`/projects/${p.id}`} className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
-          {p.featured && <Badge tone="navy">주요</Badge>}
+          {p.featured && <Badge tone="solid">주요</Badge>}
           <Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
           <Badge tone={PRIORITY_TONE[p.priority]}>{PRIORITY_LABEL[p.priority] ?? p.priority}</Badge>
         </div>

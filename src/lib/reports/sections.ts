@@ -18,16 +18,17 @@ export type Section<P> = {
 
 /**
  * 프로젝트를 상태별 3개 섹션으로 나눈다. 미배치는 제출 주체가 없어 제출 수를 세지 않는다.
- * 섹션 안에서는 주요 프로젝트(featured)를 맨 위로 올리고 나머지는 입력 순서를 유지한다
+ * 진행 중에 주요 프로젝트(featured)가 하나라도 있으면 진행 중 섹션은 주요 프로젝트만 보여준다.
+ * 아무것도 지정하지 않았으면 섹션이 비지 않도록 전부 보여준다
  */
 export function buildSections<P extends { id: string; status: ProjectStatus; featured?: boolean }>(
   projects: P[],
   submittedIds: Set<string>,
 ): Section<P>[] {
+  const hasFeatured = projects.some((p) => p.status === "IN_PROGRESS" && p.featured);
   return ORDER.map(({ key, label }) => {
     const rows = projects
-      .filter((p) => p.status === key)
-      .sort((a, b) => Number(!!b.featured) - Number(!!a.featured))
+      .filter((p) => p.status === key && (key !== "IN_PROGRESS" || !hasFeatured || p.featured))
       .map((project) => ({ project, submitted: key !== "UNASSIGNED" && submittedIds.has(project.id) }));
     return { key, label, rows, submitted: rows.filter((r) => r.submitted).length, total: rows.length };
   });

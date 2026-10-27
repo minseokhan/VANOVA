@@ -35,11 +35,23 @@ describe("buildSections", () => {
     expect(s.every((x) => x.rows.length === 0 && x.total === 0)).toBe(true);
   });
 
-  it("섹션 안에서 주요 프로젝트를 맨 위로 올리고 나머지는 입력 순서를 유지한다", () => {
+  it("진행 중에 주요 프로젝트가 있으면 주요 프로젝트만 보여주고 제출 수도 그 안에서 센다", () => {
     const s = buildSections(
-      [p("a", "IN_PROGRESS"), p("b", "IN_PROGRESS"), { ...p("c", "IN_PROGRESS"), featured: true }],
-      new Set(),
+      [p("a", "IN_PROGRESS"), { ...p("b", "IN_PROGRESS"), featured: true }, { ...p("c", "IN_PROGRESS"), featured: true }],
+      new Set(["a", "b"]),
     );
-    expect(s[0].rows.map((r) => r.project.id)).toEqual(["c", "a", "b"]);
+    expect(s[0].rows.map((r) => r.project.id)).toEqual(["b", "c"]);
+    expect(s[0].submitted).toBe(1);
+    expect(s[0].total).toBe(2);
+  });
+
+  it("진행 중에 주요 프로젝트가 없으면 전부 보여준다", () => {
+    const s = buildSections([p("a", "IN_PROGRESS"), p("b", "IN_PROGRESS")], new Set());
+    expect(s[0].rows.map((r) => r.project.id)).toEqual(["a", "b"]);
+  });
+
+  it("완료·미배치 섹션은 주요 여부로 거르지 않는다", () => {
+    const s = buildSections([p("a", "DONE"), { ...p("b", "DONE"), featured: true }], new Set());
+    expect(s[1].rows.map((r) => r.project.id)).toEqual(["a", "b"]);
   });
 });
