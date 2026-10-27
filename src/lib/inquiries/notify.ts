@@ -15,12 +15,13 @@ export function buildInquiryNotice({
   return `${header}\n${quoted}\n${link}`;
 }
 
-/** 첫 답변 알림 — 부원도 보는 채널이라 문의 내용은 넣지 않는다 */
+/** 운영진 답변 알림(첫 답변 · 추가 답변) — 부원도 보는 채널이라 문의 내용은 넣지 않는다 */
 export function buildAnswerNotice({
-  authorName, authorDiscordId, baseUrl,
-}: { authorName: string; authorDiscordId?: string; baseUrl: string }): string {
+  authorName, authorDiscordId, baseUrl, followUp = false,
+}: { authorName: string; authorDiscordId?: string; baseUrl: string; followUp?: boolean }): string {
   const who = authorDiscordId ? `<@${authorDiscordId}> ` : `**${authorName}**님, `;
-  return `${who}문의하신 내용에 답변이 완료되었습니다. 확인해 주세요.\n${baseUrl}/inquiries`;
+  const what = followUp ? "추가 답변이 달렸습니다" : "답변이 완료되었습니다";
+  return `${who}문의하신 내용에 ${what}. 확인해 주세요.\n${baseUrl}/inquiries`;
 }
 
 const EXCERPT_MAX = 200;
@@ -30,7 +31,7 @@ function oneLine(s: string, max: number): string {
   return t.length > max ? `${t.slice(0, max)}…` : t;
 }
 
-/** 추가 답변(답글) 알림 — 운영진 비공개 채널 */
+/** 문의자가 단 추가 답변(답글) 알림 — 운영진 비공개 채널 */
 export function buildReplyNotice({
   inquiryAuthorName, inquiryContent, replierName, content, baseUrl, userId,
 }: { inquiryAuthorName: string; inquiryContent: string; replierName: string; content: string; baseUrl: string; userId?: string }): string {

@@ -33,6 +33,12 @@ describe("buildAnswerNotice", () => {
     );
   });
 
+  it("followUp이면 추가 답변 문구", () => {
+    expect(buildAnswerNotice({ authorName: "홍길동", authorDiscordId: "U2", baseUrl: "https://van.example", followUp: true })).toBe(
+      "<@U2> 문의하신 내용에 추가 답변이 달렸습니다. 확인해 주세요.\nhttps://van.example/inquiries",
+    );
+  });
+
   it("디스코드 ID가 없으면 이름으로", () => {
     expect(buildAnswerNotice({ authorName: "홍길동", baseUrl: "https://van.example" })).toBe(
       "**홍길동**님, 문의하신 내용에 답변이 완료되었습니다. 확인해 주세요.\nhttps://van.example/inquiries",
@@ -41,12 +47,12 @@ describe("buildAnswerNotice", () => {
 });
 
 describe("buildReplyNotice", () => {
-  const reply = { inquiryAuthorName: "홍길동", inquiryContent: "로그인이 안 돼요", replierName: "김철수", content: "아직도 안 돼요", baseUrl: "https://van.example" };
+  const reply = { inquiryAuthorName: "홍길동", inquiryContent: "로그인이 안 돼요", replierName: "홍길동", content: "아직도 안 돼요", baseUrl: "https://van.example" };
 
   it("언급 + 어떤 문의인지 + 추가 답변 + 확인 요청 + 링크", () => {
     expect(buildReplyNotice({ ...reply, userId: "U1" })).toBe(
       "<@U1> 💬 **홍길동님 문의에 추가 답변이 달렸습니다. 확인해 주세요.**\n" +
-        "> 문의: 로그인이 안 돼요\n> 추가 답변 (김철수): 아직도 안 돼요\nhttps://van.example/inquiries",
+        "> 문의: 로그인이 안 돼요\n> 추가 답변 (홍길동): 아직도 안 돼요\nhttps://van.example/inquiries",
     );
   });
 

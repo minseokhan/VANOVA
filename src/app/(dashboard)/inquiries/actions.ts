@@ -91,17 +91,23 @@ export async function replyInquiry(inquiryId: string, _prev: FormState, fd: Form
   if (error) return { fieldErrors: { content: error } };
   const inquiry = await db.inquiry.findUnique({
     where: { id: inquiryId },
-    select: { authorId: true, content: true, author: { select: { name: true } } },
+    select: { authorId: true, content: true, author: { select: { name: true, discordId: true } } },
   });
   if (!inquiry) return { error: "문의를 찾을 수 없습니다" };
   if (!canReplyInquiry(user, inquiry)) return { error: "답글을 달 수 없는 문의입니다" };
   await db.inquiryReply.create({ data: { inquiryId, authorId: user.id, content: content.trim() } });
   revalidate();
+  // 답글은 문의자 또는 운영진만 단다. 문의자 답글 → 운영진 비공개 채널, 운영진 답글 → 문의 채널에서 문의자 언급
   after(async () => {
+    if (user.id !== inquiry.authorId) {
+      const authorDiscordId = inquiry.author.discordId ?? undefined;
+      return notify(
+        process.env.DISCORD_INQUIRY_ANSWER_WEBHOOK_URL,
+        buildAnswerNotice({ authorName: inquiry.author.name, authorDiscordId, baseUrl: baseUrl(), followUp: true }),
+        authorDiscordId,
+      );
+    }
     const userId = process.env.DISCORD_INQUIRY_USER_ID || undefined;
-    // 알림 받는 본인이 단 답글은 알리지 않는다 (개인 설정의 디스코드 ID로 본인을 알아본다)
-    const me = await db.user.findUnique({ where: { id: user.id }, select: { discordId: true } });
-    if (userId && me?.discordId === userId) return;
     await notify(
       process.env.DISCORD_INQUIRY_WEBHOOK_URL,
       buildReplyNotice({
