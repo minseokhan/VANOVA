@@ -10,6 +10,7 @@ const p = (
     summary: string;
     priority: string;
     members: { id: string }[];
+    featured: boolean;
   }>,
 ) => ({
   id: over.code ?? "1-1",
@@ -82,6 +83,14 @@ describe("sortProjects", () => {
   it("집합이 없으면 기존 정렬 그대로", () => {
     const list = [p({ code: "1", status: "DONE", members: [{ id: "me" }] }), p({ code: "2", status: "IN_PROGRESS" })];
     expect(sortProjects(list).map((x) => x.code)).toEqual(["2", "1"]);
+  });
+  it("주요 프로젝트가 내 프로젝트보다도 맨 위로", () => {
+    const list = [
+      p({ code: "1", status: "IN_PROGRESS", members: [{ id: "me" }] }),
+      p({ code: "2", status: "DONE", featured: true }),
+      p({ code: "3", status: "IN_PROGRESS", featured: true }),
+    ];
+    expect(sortProjects(list, myProjectIds(list, "me")).map((x) => x.code)).toEqual(["3", "2", "1"]);
   });
   it("원본 배열을 변경하지 않는다", () => {
     const list = [p({ code: "2" }), p({ code: "1" })];

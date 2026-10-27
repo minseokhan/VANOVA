@@ -27,7 +27,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const [projects, updates, note, reminder] = await Promise.all([
     db.project.findMany({
       orderBy: { code: "asc" },
-      select: { id: true, code: true, title: true, status: true },
+      select: { id: true, code: true, title: true, status: true, featured: true },
     }),
     db.weeklyUpdate.findMany({
       where: { weekStart: week },

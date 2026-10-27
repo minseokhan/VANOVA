@@ -34,4 +34,12 @@ describe("buildSections", () => {
     expect(s).toHaveLength(3);
     expect(s.every((x) => x.rows.length === 0 && x.total === 0)).toBe(true);
   });
+
+  it("섹션 안에서 주요 프로젝트를 맨 위로 올리고 나머지는 입력 순서를 유지한다", () => {
+    const s = buildSections(
+      [p("a", "IN_PROGRESS"), p("b", "IN_PROGRESS"), { ...p("c", "IN_PROGRESS"), featured: true }],
+      new Set(),
+    );
+    expect(s[0].rows.map((r) => r.project.id)).toEqual(["c", "a", "b"]);
+  });
 });

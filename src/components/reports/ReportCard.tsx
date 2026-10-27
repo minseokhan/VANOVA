@@ -12,7 +12,7 @@ export type ReportCardUpdate = {
   updatedAt: Date;
 };
 
-export type ReportCardProject = { id: string; code: string; title: string };
+export type ReportCardProject = { id: string; code: string; title: string; featured?: boolean };
 
 /** 세 항목은 배경색 대신 라벨 열 + 가로 구분선으로 나눈다 */
 function Block({ label, text }: { label: string; text: string }) {
@@ -26,9 +26,12 @@ function Block({ label, text }: { label: string; text: string }) {
 
 function Title({ project }: { project: ReportCardProject }) {
   return (
-    <Link href={`/projects/${project.id}`} className="min-w-0 truncate text-sm font-medium text-slate-900 hover:underline">
-      <span className="tabular-nums text-slate-500">{project.code}</span> {project.title}
-    </Link>
+    <>
+      <Link href={`/projects/${project.id}`} className="min-w-0 truncate text-sm font-medium text-slate-900 hover:underline">
+        <span className="tabular-nums text-slate-500">{project.code}</span> {project.title}
+      </Link>
+      {project.featured && <Badge tone="navy">주요</Badge>}
+    </>
   );
 }
 

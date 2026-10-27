@@ -102,6 +102,8 @@ model Project {
   summary      String
   description  String
   status       ProjectStatus @default(UNASSIGNED)
+  /// 운영진이 지정한 주요 프로젝트. 대시보드·주간 보고에서 맨 위에 보인다
+  featured     Boolean       @default(false)
   githubUrl    String?
   deployUrl    String?
   mainLanguage String?
