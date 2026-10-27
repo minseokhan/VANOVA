@@ -42,6 +42,11 @@ export function canEditInquiry(user: { id: string }, inquiry: { authorId: string
   return inquiry.authorId === user.id && inquiry.answer === null;
 }
 
+/** 답변·답글은 쓴 사람 본인만 수정·삭제한다 */
+export function canModifyPost(user: { id: string }, authorId: string | null): boolean {
+  return authorId === user.id;
+}
+
 /** 답변 이후 대화는 운영진과 작성자 본인만 이어 간다 */
 export function canReplyInquiry(user: { id: string; role: string }, inquiry: { authorId: string }): boolean {
   return isAdmin(user) || inquiry.authorId === user.id;
@@ -50,8 +55,8 @@ export function canReplyInquiry(user: { id: string; role: string }, inquiry: { a
 export type InquiryScope = "ALL" | "MINE" | "UNANSWERED";
 
 /** 목록 상한(take) 아래에서도 스코프 결과가 정확하도록 DB where 로 내린다 */
-export function inquiryWhere(scope: InquiryScope, userId: string): { authorId?: string; needsAnswer?: true } {
+export function inquiryWhere(scope: InquiryScope, userId: string): { authorId?: string; answer?: null } {
   if (scope === "MINE") return { authorId: userId };
-  if (scope === "UNANSWERED") return { needsAnswer: true };
+  if (scope === "UNANSWERED") return { answer: null };
   return {};
 }

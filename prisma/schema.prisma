@@ -219,10 +219,6 @@ model Inquiry {
   answer       String?
   answeredById String?
   answeredAt   DateTime?
-  /**
-   * 운영진 응답 대기 — 새 문의·작성자 후속 답글이면 true, 운영진이 답하면 false. 사이드바 숫자의 근거
-   */
-  needsAnswer  Boolean     @default(true)
   createdAt    DateTime    @default(now())
 
   author     User           @relation("InquiryAuthor", fields: [authorId], references: [id], onDelete: Cascade)

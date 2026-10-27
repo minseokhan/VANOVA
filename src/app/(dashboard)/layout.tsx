@@ -7,7 +7,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = await requireUser();
   const [pendingCount, inquiryCount] =
     user.role === "ADMIN"
-      ? await Promise.all([db.user.count({ where: { approved: false } }), db.inquiry.count({ where: { needsAnswer: true } })])
+      ? await Promise.all([db.user.count({ where: { approved: false } }), db.inquiry.count({ where: { answer: null } })])
       : [0, 0];
   return (
     <div className="min-h-screen lg:flex">

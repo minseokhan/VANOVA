@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guards";
-import { canDeleteInquiry, canEditInquiry, canReplyInquiry, inquiryWhere, type InquiryScope } from "@/lib/inquiries/rules";
+import { canDeleteInquiry, canEditInquiry, canModifyPost, canReplyInquiry, inquiryWhere, type InquiryScope } from "@/lib/inquiries/rules";
 import { cn } from "@/lib/utils/cn";
 import { InquiryCard } from "@/components/inquiries/InquiryCard";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
@@ -32,7 +32,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
         replies: { orderBy: { createdAt: "asc" }, include: { author: { select: { name: true, role: true } } } },
       },
     }),
-    db.inquiry.count({ where: { needsAnswer: true } }),
+    db.inquiry.count({ where: { answer: null } }),
   ]);
 
   return (
@@ -87,11 +87,12 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                   answer: i.answer,
                   answererName: i.answeredBy?.name ?? null,
                   answeredAt: i.answeredAt,
-                  needsAnswer: i.needsAnswer,
+                  answerMine: canModifyPost(user, i.answeredById),
                   replies: i.replies.map((r) => ({
                     id: r.id,
                     authorName: r.author.name,
                     fromAdmin: r.author.role === "ADMIN",
+                    mine: canModifyPost(user, r.authorId),
                     content: r.content,
                     createdAt: r.createdAt,
                   })),

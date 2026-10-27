@@ -1,6 +1,3 @@
--- AlterTable
-ALTER TABLE "Inquiry" ADD COLUMN     "needsAnswer" BOOLEAN NOT NULL DEFAULT true;
-
 -- CreateTable
 CREATE TABLE "InquiryReply" (
     "id" TEXT NOT NULL,
@@ -22,5 +19,3 @@ ALTER TABLE "InquiryReply" ADD CONSTRAINT "InquiryReply_inquiryId_fkey" FOREIGN 
 ALTER TABLE "InquiryReply" ADD CONSTRAINT "InquiryReply_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 
--- 기존 데이터: 이미 답변된 문의는 대기 아님
-UPDATE "Inquiry" SET "needsAnswer" = false WHERE "answer" IS NOT NULL;
