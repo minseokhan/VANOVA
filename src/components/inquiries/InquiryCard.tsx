@@ -121,7 +121,7 @@ export function InquiryCard({
             </Button>
           )}
           {canEdit && (
-            <Button variant="text" size="sm" onClick={() => setEditing(true)}>
+            <Button variant="soft" size="sm" onClick={() => setEditing(true)}>
               수정
             </Button>
           )}
