@@ -36,7 +36,7 @@ function SaveRow({
   );
 }
 
-export function AccountForm({ username, name }: { username: string; name: string }) {
+export function AccountForm({ username, name, discordId }: { username: string; name: string; discordId: string | null }) {
   const [state, action, pending] = useActionState<FormState, FormData>(updateAccount, {});
   const { formRef, submit } = useRetainOnError(action, state);
   const { noChange, check, guard } = useFormDirty(formRef, state);
@@ -48,6 +48,10 @@ export function AccountForm({ username, name }: { username: string; name: string
       </Field>
       <Field id="username" label="아이디 (영문 소문자·숫자·_ 3~20자)" error={e.username}>
         <Input id="username" name="username" defaultValue={username} autoComplete="username" required />
+      </Field>
+      <Field id="discordId" label="디스코드 사용자 ID (선택 · 문의 답변 알림에서 언급용)" error={e.discordId}>
+        <Input id="discordId" name="discordId" defaultValue={discordId ?? ""} inputMode="numeric" />
+        <p className="mt-1 text-xs text-slate-500">디스코드 설정 → 고급 → 개발자 모드를 켜고, 내 프로필 우클릭 → 사용자 ID 복사</p>
       </Field>
       <SaveRow state={state} pending={pending} noChange={noChange} />
     </form>

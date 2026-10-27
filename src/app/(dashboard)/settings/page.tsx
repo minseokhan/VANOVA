@@ -21,6 +21,7 @@ export default async function SettingsPage() {
     select: {
       username: true,
       name: true,
+      discordId: true,
       level: true,
       preferredPosition: true,
       tools: true,
@@ -37,7 +38,7 @@ export default async function SettingsPage() {
       <PageHeader title="개인 설정" />
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="계정">
-          <AccountForm username={user.username} name={user.name} />
+          <AccountForm username={user.username} name={user.name} discordId={user.discordId} />
         </Section>
         <Section title="비밀번호 변경">
           <PasswordForm />

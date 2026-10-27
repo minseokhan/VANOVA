@@ -22,12 +22,16 @@ function revalidate() {
 
 export async function updateAccount(_prev: FormState, formData: FormData): Promise<FormState> {
   const me = await requireUser();
-  const input = { username: field(formData, "username").trim(), name: field(formData, "name").trim() };
+  const input = {
+    username: field(formData, "username").trim(),
+    name: field(formData, "name").trim(),
+    discordId: field(formData, "discordId").trim(),
+  };
   const result = validateAccount(input);
   if (!result.ok) return { fieldErrors: result.errors };
   const taken = await db.user.findUnique({ where: { username: input.username }, select: { id: true } });
   if (taken && taken.id !== me.id) return { fieldErrors: { username: "이미 사용 중인 아이디입니다" } };
-  await db.user.update({ where: { id: me.id }, data: input });
+  await db.user.update({ where: { id: me.id }, data: { ...input, discordId: input.discordId || null } });
   revalidate();
   return { ok: true };
 }
