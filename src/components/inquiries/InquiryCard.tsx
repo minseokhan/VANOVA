@@ -93,17 +93,6 @@ export function InquiryCard({
         />
       )}
 
-      {item.replies.length > 0 && (
-        <button
-          type="button"
-          aria-expanded={showThread}
-          onClick={() => setShowThread((v) => !v)}
-          className="mt-2 text-xs text-navy-500 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-500"
-        >
-          {showThread ? "대화 접기" : `이어진 대화 ${item.replies.length}개 보기`}
-        </button>
-      )}
-
       {showThread &&
         item.replies.map((r) => (
           <Post
@@ -117,6 +106,17 @@ export function InquiryCard({
             remove={() => deleteReply(r.id)}
           />
         ))}
+
+      {item.replies.length > 0 && (
+        <button
+          type="button"
+          aria-expanded={showThread}
+          onClick={() => setShowThread((v) => !v)}
+          className="mt-2 text-xs text-navy-500 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-500"
+        >
+          {showThread ? "대화 접기" : `이어진 대화 ${item.replies.length}개 보기`}
+        </button>
+      )}
 
       {mode === "answer" && (
         <div className="mt-3">
@@ -213,8 +213,9 @@ function Post({
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{content}</p>
       <p className="mt-2 text-xs text-slate-500">{meta}</p>
       {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+      {/* 같은 name 의 details 는 하나만 열린다 — 다른 ⋮ 를 열면 기존 메뉴가 닫힌다 */}
       {mine && (
-        <details className="absolute right-2 top-2">
+        <details name="inquiry-post-menu" className="absolute right-2 top-2">
           <summary
             aria-label="더보기"
             className="flex cursor-pointer list-none rounded-md p-1 text-slate-500 hover:bg-slate-200/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-500 [&::-webkit-details-marker]:hidden"
@@ -223,10 +224,10 @@ function Post({
           </summary>
           <div className="absolute right-0 z-10 mt-1 flex w-28 flex-col gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-md">
             <Button variant="soft" size="sm" onClick={() => setEditing(true)}>
-              수정하기
+              수정
             </Button>
             <ConfirmDialog
-              label="삭제하기"
+              label="삭제"
               title="삭제"
               message="이 글을 삭제할까요? 되돌릴 수 없습니다."
               confirmLabel="삭제"
