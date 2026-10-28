@@ -159,8 +159,12 @@ function DraftEditor({ initial }: { initial: MinutesDraft }) {
         <div className="space-y-2">
           {d.decisions.map((x, i) => (
             <div key={i} className="flex items-center gap-2">
-              <Input className="w-24 shrink-0" value={x.label} placeholder="구분" aria-label={`결정사항 ${i + 1} 구분`} onChange={(ev) => setDecision(i, "label", ev.target.value)} />
-              <Input value={x.text} placeholder="결정사항" aria-label={`결정사항 ${i + 1} 내용`} onChange={(ev) => setDecision(i, "text", ev.target.value)} />
+              <div className="w-24 shrink-0">
+                <Input value={x.label} placeholder="구분" aria-label={`결정사항 ${i + 1} 구분`} onChange={(ev) => setDecision(i, "label", ev.target.value)} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <Input value={x.text} placeholder="결정사항" aria-label={`결정사항 ${i + 1} 내용`} onChange={(ev) => setDecision(i, "text", ev.target.value)} />
+              </div>
               <Button variant="text" aria-label={`결정사항 ${i + 1} 삭제`} onClick={() => set("decisions", d.decisions.filter((_, j) => j !== i))}>
                 <X size={16} aria-hidden />
               </Button>

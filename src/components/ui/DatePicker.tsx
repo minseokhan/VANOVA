@@ -87,7 +87,7 @@ export function DatePicker({
                       v === value
                         ? "bg-navy-500 font-semibold text-white"
                         : marked.has(v)
-                          ? "bg-navy-100 font-semibold text-navy-700 hover:bg-navy-50"
+                          ? "bg-navy-100 font-semibold text-navy-700 ring-1 ring-navy-500/50 ring-inset hover:bg-navy-50"
                           : "text-slate-700 hover:bg-slate-100",
                     )}
                     aria-pressed={v === value}
@@ -98,7 +98,7 @@ export function DatePicker({
               })}
             </div>
             <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="inline-block size-3 rounded-sm bg-navy-100" aria-hidden />
+              <span className="inline-block size-3 rounded-sm bg-navy-100 ring-1 ring-navy-500/50 ring-inset" aria-hidden />
               {markedLabel}
             </p>
           </div>
