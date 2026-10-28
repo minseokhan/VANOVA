@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Megaphone } from "lucide-react";
 import { useActionState, useState } from "react";
 import { deleteNotice, updateNotice } from "@/app/(dashboard)/notices/actions";
 import type { FormState } from "@/app/(dashboard)/projects/[id]/actions";
@@ -44,7 +44,7 @@ export function NoticeCard({ notice, isAdmin, featured = false }: { notice: Noti
   if (editing) {
     const Wrapper = featured ? "div" : "li"; // 이전 공지는 <ul> 안에 들어간다
     return (
-      <Wrapper className="rounded-md border border-slate-200 bg-white p-5">
+      <Wrapper className={cn("bg-white p-5", featured && "rounded-md border border-slate-200")}>
         <form ref={formRef} action={guard(submit)} onInput={check} onChange={check} className="space-y-3">
           <Field id={`notice-title-${notice.id}`} label="제목" error={e.title}>
             <Input id={`notice-title-${notice.id}`} name="title" defaultValue={notice.title} maxLength={MAX_NOTICE.title} required />
@@ -121,10 +121,15 @@ export function NoticeCard({ notice, isAdmin, featured = false }: { notice: Noti
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="flex w-full items-center gap-4 px-1 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-500"
+        className={cn(
+          "flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50",
+          "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-navy-500",
+          open && "bg-navy-50 hover:bg-navy-50",
+        )}
       >
+        <Megaphone size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-slate-400" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">{notice.title}</span>
-        <span className="shrink-0 text-xs tabular-nums text-slate-500">{formatDate(notice.createdAt)}</span>
+        <span className="shrink-0 text-xs tabular-nums text-slate-500">{meta}</span>
         <ChevronDown
           size={16}
           strokeWidth={1.75}
@@ -134,8 +139,7 @@ export function NoticeCard({ notice, isAdmin, featured = false }: { notice: Noti
       </button>
 
       {open && (
-        <div className="px-1 pb-4">
-          <p className="mb-2 text-xs text-slate-500">{meta}</p>
+        <div className="border-t border-slate-200 px-5 py-4 pl-12">
           <NoticeBody content={notice.content} />
           {actions}
         </div>

@@ -35,8 +35,10 @@ export default async function NoticesPage() {
         )}
         {older.length > 0 && (
           <section>
-            <h2 className="mb-2 text-sm font-semibold text-slate-900">이전 공지</h2>
-            <ul className="divide-y divide-slate-200 border-y border-slate-200">
+            <h2 className="mb-2 text-sm font-semibold text-slate-900">
+              이전 공지 <span className="font-normal tabular-nums text-slate-500">{older.length}</span>
+            </h2>
+            <ul className="divide-y divide-slate-200 overflow-hidden rounded-md border border-slate-200 bg-white">
               {older.map((n) => (
                 <NoticeCard key={n.id} isAdmin={isAdmin} notice={toItem(n)} />
               ))}
