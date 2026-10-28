@@ -34,16 +34,18 @@ export function Sidebar({
   user,
   pendingCount,
   inquiryCount,
+  noticeCount,
   onNavigate,
 }: {
   user: SessionUser;
   pendingCount: number;
   inquiryCount: number;
+  noticeCount: number;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const isAdmin = user.role === "ADMIN";
-  const counts: Record<string, number> = { "/members": pendingCount, "/inquiries": inquiryCount };
+  const counts: Record<string, number> = { "/members": pendingCount, "/inquiries": inquiryCount, "/notices": noticeCount };
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   const renderItem = ({ href, label, icon: Icon }: Item) => (
