@@ -39,7 +39,7 @@ function baseUrl() {
 async function notify(url: string | undefined, message: string, mentionUserId?: string) {
   if (!url) return;
   try {
-    await sendWebhook(url, message, undefined, mentionUserId ? [mentionUserId] : undefined);
+    await sendWebhook(url, message, undefined, false, mentionUserId ? [mentionUserId] : undefined);
   } catch (e) {
     console.error("[inquiry] discord notify failed", e);
   }

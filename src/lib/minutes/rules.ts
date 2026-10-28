@@ -8,7 +8,7 @@ export type MinuteResult =
   | { ok: false; errors: Partial<Record<"date" | "title" | "fileUrl", string>> };
 
 /** "YYYY-MM-DD" → UTC 자정 Date (@db.Date 컬럼용). 없는 날짜는 null */
-function parseDay(v: string): Date | null {
+export function parseDay(v: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
   const d = new Date(`${v}T00:00:00Z`);
   return !isNaN(d.getTime()) && d.toISOString().startsWith(v) ? d : null;

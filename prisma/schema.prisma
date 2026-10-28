@@ -79,6 +79,9 @@ model User {
   /// 본인이 고른 선호 포지션. 실제 배치 포지션(ProjectMember.position)과는 별개
   preferredPosition Position?
 
+  /// 공지 페이지를 마지막으로 연 시각. 이후에 올라온 공지 수가 사이드바 숫자. null이면 전부 미확인
+  noticesSeenAt DateTime?
+
   memberships      ProjectMember[]
   createdFeatures  Feature[]       @relation("FeatureCreatedBy")
   weeklyUpdates    WeeklyUpdate[]
@@ -93,6 +96,7 @@ model User {
   expenses         ExpenseClaim[]
   notices          Notice[]
   meetingMinutes   MeetingMinute[]
+  meetingNotes     MeetingNote[]
 }
 
 model Project {
@@ -314,4 +318,14 @@ model MeetingMinute {
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([date])
+}
+
+/// 회의록 생성 때 운영진이 적은 자유 메모. 회의 날짜당 하나, 다시 생성하면 덮어쓴다
+model MeetingNote {
+  date      DateTime @id @db.Date
+  notes     String
+  authorId  String
+  updatedAt DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
