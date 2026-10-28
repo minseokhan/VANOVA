@@ -91,6 +91,7 @@ model User {
   expenses         ExpenseClaim[]
   notices          Notice[]
   meetingMinutes   MeetingMinute[]
+  meetingNotes     MeetingNote[]
 }
 
 model Project {
@@ -312,4 +313,14 @@ model MeetingMinute {
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([date])
+}
+
+/// 회의록 생성 때 운영진이 적은 자유 메모. 회의 날짜당 하나, 다시 생성하면 덮어쓴다
+model MeetingNote {
+  date      DateTime @id @db.Date
+  notes     String
+  authorId  String
+  updatedAt DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
