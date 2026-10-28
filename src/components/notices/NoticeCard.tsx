@@ -101,13 +101,13 @@ export function NoticeCard({ notice, isAdmin, featured = false }: { notice: Noti
   // 최신 공지는 접지 않고 본문까지 크게 — 들어오자마자 읽히는 게 공지의 목적
   if (featured) {
     return (
-      <article className="rounded-md border border-l-4 border-slate-200 border-l-navy-700 bg-white p-6">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span className="inline-flex items-center rounded bg-navy-100 px-2 py-0.5 font-medium text-navy-700">최신</span>
-          <span>{meta}</span>
+      <article className="rounded-md border border-l-4 border-slate-200 border-l-navy-700 bg-white px-5 py-4">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex shrink-0 items-center rounded bg-navy-100 px-2 py-0.5 text-xs font-medium text-navy-700">최신</span>
+          <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-slate-900">{notice.title}</h2>
+          <span className="shrink-0 text-xs text-slate-500">{meta}</span>
         </div>
-        <h2 className="mt-2 text-lg font-semibold text-slate-900">{notice.title}</h2>
-        <div className="mt-4">
+        <div className="mt-3">
           <NoticeBody content={notice.content} />
         </div>
         {actions}
