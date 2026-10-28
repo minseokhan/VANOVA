@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guards";
 import { NoticeCard } from "@/components/notices/NoticeCard";
 import { NoticeForm } from "@/components/notices/NoticeForm";
+import { MarkNoticesSeen } from "@/components/notices/MarkNoticesSeen";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -16,6 +17,7 @@ export default async function NoticesPage() {
   return (
     <>
       <PageHeader title="공지" />
+      {!isAdmin && <MarkNoticesSeen />}
       <div className="space-y-6">
         {isAdmin && <NoticeForm />}
         {notices.length === 0 ? (

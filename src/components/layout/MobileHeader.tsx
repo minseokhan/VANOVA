@@ -10,10 +10,12 @@ export function MobileHeader({
   user,
   pendingCount,
   inquiryCount,
+  noticeCount,
 }: {
   user: SessionUser;
   pendingCount: number;
   inquiryCount: number;
+  noticeCount: number;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -34,7 +36,7 @@ export function MobileHeader({
         <div className="fixed inset-0 z-40 lg:hidden">
           <button type="button" aria-label="메뉴 닫기" onClick={() => setOpen(false)} className="absolute inset-0 bg-slate-900/50" />
           <div className="absolute inset-y-0 left-0">
-            <Sidebar user={user} pendingCount={pendingCount} inquiryCount={inquiryCount} onNavigate={() => setOpen(false)} />
+            <Sidebar user={user} pendingCount={pendingCount} inquiryCount={inquiryCount} noticeCount={noticeCount} onNavigate={() => setOpen(false)} />
           </div>
           <button
             type="button"
