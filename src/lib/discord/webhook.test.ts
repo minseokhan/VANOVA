@@ -30,6 +30,11 @@ describe("sendWebhook", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).allowed_mentions).toEqual({ parse: [], roles: [] });
   });
 
+  it("userIds를 주면 해당 사람만 언급 허용", async () => {
+    await sendWebhook(url, "hi", undefined, false, ["U1"]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).allowed_mentions).toEqual({ parse: [], roles: [], users: ["U1"] });
+  });
+
   it("everyone이면 @everyone 언급 허용", async () => {
     await sendWebhook(url, "hi", undefined, true);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).allowed_mentions).toEqual({ parse: ["everyone"], roles: [] });

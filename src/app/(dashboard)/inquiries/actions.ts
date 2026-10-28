@@ -1,10 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/auth/guards";
 import { canDeleteInquiry, canEditInquiry, canModifyPost, canReplyInquiry, parseInquiryKind, validateInquiryContent } from "@/lib/inquiries/rules";
 import { validateAnswer } from "@/lib/questions/rules";
+import { buildAnswerNotice, buildInquiryNotice, buildReplyNotice } from "@/lib/inquiries/notify";
+import { sendWebhook } from "@/lib/discord/webhook";
 import type { FormState } from "@/app/(dashboard)/projects/[id]/actions";
 
 function revalidate() {
@@ -20,7 +23,26 @@ export async function createInquiry(_prev: FormState, fd: FormData): Promise<For
   if (error) return { fieldErrors: { content: error } };
   await db.inquiry.create({ data: { authorId: user.id, kind, content: content.trim() } });
   revalidate();
+  // 응답을 보낸 뒤 전송한다. 디스코드가 실패해도 문의 등록은 성공으로 둔다
+  after(() => {
+    const userId = process.env.DISCORD_INQUIRY_USER_ID || undefined;
+    return notify(process.env.DISCORD_INQUIRY_WEBHOOK_URL, buildInquiryNotice({ kind, authorName: user.name, content, baseUrl: baseUrl(), userId }), userId);
+  });
   return { ok: true };
+}
+
+function baseUrl() {
+  return process.env.APP_BASE_URL || `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+}
+
+/** 디스코드 알림. url 미설정이면 건너뛰고, 실패는 로그만 남긴다 (호출한 작업은 이미 성공했으므로) */
+async function notify(url: string | undefined, message: string, mentionUserId?: string) {
+  if (!url) return;
+  try {
+    await sendWebhook(url, message, undefined, false, mentionUserId ? [mentionUserId] : undefined);
+  } catch (e) {
+    console.error("[inquiry] discord notify failed", e);
+  }
 }
 
 export async function answerInquiry(inquiryId: string, _prev: FormState, fd: FormData): Promise<FormState> {
@@ -34,6 +56,16 @@ export async function answerInquiry(inquiryId: string, _prev: FormState, fd: For
   });
   if (count === 0) return { error: "이미 답변이 있거나 문의를 찾을 수 없습니다" };
   revalidate();
+  after(async () => {
+    const inquiry = await db.inquiry.findUnique({ where: { id: inquiryId }, select: { author: { select: { name: true, discordId: true } } } });
+    if (!inquiry) return;
+    const authorDiscordId = inquiry.author.discordId ?? undefined;
+    await notify(
+      process.env.DISCORD_INQUIRY_ANSWER_WEBHOOK_URL,
+      buildAnswerNotice({ authorName: inquiry.author.name, authorDiscordId, baseUrl: baseUrl() }),
+      authorDiscordId,
+    );
+  });
   return {};
 }
 
@@ -57,11 +89,38 @@ export async function replyInquiry(inquiryId: string, _prev: FormState, fd: Form
   const content = String(fd.get("content") ?? "");
   const error = validateAnswer(content);
   if (error) return { fieldErrors: { content: error } };
-  const inquiry = await db.inquiry.findUnique({ where: { id: inquiryId }, select: { authorId: true } });
+  const inquiry = await db.inquiry.findUnique({
+    where: { id: inquiryId },
+    select: { authorId: true, content: true, author: { select: { name: true, discordId: true } } },
+  });
   if (!inquiry) return { error: "문의를 찾을 수 없습니다" };
   if (!canReplyInquiry(user, inquiry)) return { error: "답글을 달 수 없는 문의입니다" };
   await db.inquiryReply.create({ data: { inquiryId, authorId: user.id, content: content.trim() } });
   revalidate();
+  // 답글은 문의자 또는 운영진만 단다. 문의자 답글 → 운영진 비공개 채널, 운영진 답글 → 문의 채널에서 문의자 언급
+  after(async () => {
+    if (user.id !== inquiry.authorId) {
+      const authorDiscordId = inquiry.author.discordId ?? undefined;
+      return notify(
+        process.env.DISCORD_INQUIRY_ANSWER_WEBHOOK_URL,
+        buildAnswerNotice({ authorName: inquiry.author.name, authorDiscordId, baseUrl: baseUrl(), followUp: true }),
+        authorDiscordId,
+      );
+    }
+    const userId = process.env.DISCORD_INQUIRY_USER_ID || undefined;
+    await notify(
+      process.env.DISCORD_INQUIRY_WEBHOOK_URL,
+      buildReplyNotice({
+        inquiryAuthorName: inquiry.author.name,
+        inquiryContent: inquiry.content,
+        replierName: user.name,
+        content,
+        baseUrl: baseUrl(),
+        userId,
+      }),
+      userId,
+    );
+  });
   return { ok: true };
 }
 
