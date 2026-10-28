@@ -33,7 +33,7 @@ export function MinuteForm({ today }: { today: string }) {
   }
 
   return (
-    <form ref={formRef} action={submit} className="space-y-4 rounded-md border border-slate-200 bg-white p-5">
+    <form ref={formRef} action={submit} className="w-full space-y-4 rounded-md border border-slate-200 bg-white p-5">
       <div className="grid gap-4 sm:grid-cols-[11rem_1fr]">
         <Field id="mn-date" label="회의 날짜" error={e.date}>
           <Input id="mn-date" name="date" type="date" defaultValue={today} required />

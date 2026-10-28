@@ -2,8 +2,15 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guards";
 import { NoticeCard } from "@/components/notices/NoticeCard";
 import { NoticeForm } from "@/components/notices/NoticeForm";
+import { MarkNoticesSeen } from "@/components/notices/MarkNoticesSeen";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+
+type Row = { id: string; title: string; content: string; createdAt: Date; updatedAt: Date; author: { name: string } };
+
+function toItem(n: Row) {
+  return { id: n.id, title: n.title, content: n.content, authorName: n.author.name, createdAt: n.createdAt, updatedAt: n.updatedAt };
+}
 
 export default async function NoticesPage() {
   const user = await requireUser();
@@ -13,32 +20,30 @@ export default async function NoticesPage() {
     select: { id: true, title: true, content: true, createdAt: true, updatedAt: true, author: { select: { name: true } } },
   });
 
+  const [latest, ...older] = notices;
+
   return (
     <>
       <PageHeader title="공지" />
+      {!isAdmin && <MarkNoticesSeen />}
       <div className="space-y-6">
         {isAdmin && <NoticeForm />}
-        {notices.length === 0 ? (
-          <EmptyState message="등록된 공지가 없습니다" />
+        {latest ? (
+          <NoticeCard featured isAdmin={isAdmin} notice={toItem(latest)} />
         ) : (
-          <ul className="space-y-3">
-            {notices.map((n, i) => (
-              <NoticeCard
-                key={n.id}
-                isAdmin={isAdmin}
-                // 가장 최근 공지는 펼친 채로 — 들어오자마자 읽히는 게 공지의 목적
-                defaultOpen={i === 0}
-                notice={{
-                  id: n.id,
-                  title: n.title,
-                  content: n.content,
-                  authorName: n.author.name,
-                  createdAt: n.createdAt,
-                  updatedAt: n.updatedAt,
-                }}
-              />
-            ))}
-          </ul>
+          <EmptyState message="등록된 공지가 없습니다" />
+        )}
+        {older.length > 0 && (
+          <section>
+            <h2 className="mb-2 text-sm font-semibold text-slate-900">
+              이전 공지 <span className="font-normal tabular-nums text-slate-500">{older.length}</span>
+            </h2>
+            <ul className="divide-y divide-slate-200 overflow-hidden rounded-md border border-slate-200 bg-white">
+              {older.map((n) => (
+                <NoticeCard key={n.id} isAdmin={isAdmin} notice={toItem(n)} />
+              ))}
+            </ul>
+          </section>
         )}
       </div>
     </>
