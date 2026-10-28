@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/guards";
 import { readFile } from "node:fs/promises";
-import { assembleMinutes, finalizeMinutes, validateDraft, validateGenerateInput, type MinutesDraft } from "@/lib/minutes/compose";
+import { assembleMinutes, finalizeMinutes, validateGenerateInput } from "@/lib/minutes/compose";
 import { renderMinutesDocx, TEMPLATE_PATH } from "@/lib/minutes/docx";
-import { uploadDocxToDrive } from "@/lib/minutes/drive";
+import { uploadAsGoogleDoc } from "@/lib/minutes/drive";
 import { generateMinutesContent } from "@/lib/minutes/llm";
 import { validateMinute } from "@/lib/minutes/rules";
 import { getWeekStart } from "@/lib/utils/week";
@@ -25,8 +25,11 @@ export async function createMinute(_prev: FormState, fd: FormData): Promise<Form
   return { ok: true };
 }
 
-/** 자유 메모 + 주요 프로젝트 주간 보고 → LLM 초안. 메모는 회의 날짜별로 저장하고, 등록은 검토 후 registerMinute 로 */
-export async function generateMinuteDraft(_prev: FormState, fd: FormData): Promise<FormState & { draft?: MinutesDraft }> {
+/**
+ * 자유 메모 + 주요 프로젝트 주간 보고 → LLM 으로 양식을 채워 드라이브에 구글 독스로 저장하고 링크를 돌려준다.
+ * 메모는 회의 날짜별로 저장한다. 목록 등록은 운영진이 문서를 확인한 뒤 직접 한다.
+ */
+export async function generateMinute(_prev: FormState, fd: FormData): Promise<FormState & { url?: string }> {
   const user = await requireAdmin();
   const input = validateGenerateInput({
     date: String(fd.get("date") ?? ""),
@@ -71,30 +74,12 @@ export async function generateMinuteDraft(_prev: FormState, fd: FormData): Promi
   };
 
   try {
-    return { draft: assembleMinutes(ctx, await generateMinutesContent(ctx)) };
+    const doc = finalizeMinutes(assembleMinutes(ctx, await generateMinutesContent(ctx)));
+    const url = await uploadAsGoogleDoc(doc.fileName, await renderMinutesDocx(await readFile(TEMPLATE_PATH), doc));
+    return { ok: true, url };
   } catch (e) {
-    console.error("[generateMinuteDraft]", e);
+    console.error("[generateMinute]", e);
     return { error: e instanceof Error ? e.message : "회의록 생성에 실패했습니다" };
-  }
-}
-
-/** 검토·수정한 초안 → 양식 docx → 드라이브 업로드 → 목록 등록 */
-export async function registerMinute(raw: unknown): Promise<{ error?: string; url?: string }> {
-  const user = await requireAdmin();
-  const draft = validateDraft(raw);
-  if (!draft.ok) return { error: draft.error };
-
-  try {
-    const doc = finalizeMinutes(draft.value);
-    const fileUrl = await uploadDocxToDrive(doc.fileName, await renderMinutesDocx(await readFile(TEMPLATE_PATH), doc));
-    await db.meetingMinute.create({
-      data: { date: new Date(`${draft.value.date}T00:00:00Z`), title: doc.title, fileUrl, authorId: user.id },
-    });
-    revalidatePath("/minutes");
-    return { url: fileUrl };
-  } catch (e) {
-    console.error("[registerMinute]", e);
-    return { error: e instanceof Error ? e.message : "회의록 등록에 실패했습니다" };
   }
 }
 

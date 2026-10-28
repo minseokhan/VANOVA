@@ -242,7 +242,7 @@ export function finalizeMinutes(d: MinutesDraft): MinutesDoc {
 
   return {
     title: `${day.getUTCMonth() + 1}월 ${Math.ceil(day.getUTCDate() / 7)}주차 주간 회의 보고`,
-    fileName: `${d.date}_VAN_개발회의_회의록.docx`,
+    fileName: `${d.date}_VAN_개발회의_회의록`,
     vars: {
       datetime: d.datetime.trim(),
       criteria: d.criteria.trim(),
@@ -259,37 +259,5 @@ export function finalizeMinutes(d: MinutesDraft): MinutesDoc {
     progress: d.projects.map((p) => ({ project: p.project, progress: orNone(p.progress) })),
     followUp: d.projects.map((p) => ({ project: p.project, followUp: orNone(p.followUp) })),
     requirement: d.projects.map((p) => ({ project: p.project, requirement: orNone(p.requirement) })),
-  };
-}
-
-const MAX_ROWS = 30;
-
-/** 클라이언트에서 돌아온 초안(신뢰 경계)을 구조·길이까지 확인한다 */
-export function validateDraft(raw: unknown): { ok: true; value: MinutesDraft } | { ok: false; error: string } {
-  const fail = { ok: false as const, error: "회의록 초안 형식이 올바르지 않습니다" };
-  const isText = (v: unknown): v is string => typeof v === "string" && v.length <= MAX_NOTES;
-  const isRows = (v: unknown, keys: string[]): v is Record<string, string>[] =>
-    Array.isArray(v) &&
-    v.length <= MAX_ROWS &&
-    v.every((r) => typeof r === "object" && r !== null && keys.every((k) => isText((r as Record<string, unknown>)[k])));
-
-  if (typeof raw !== "object" || raw === null) return fail;
-  const r = raw as Record<string, unknown>;
-  const textKeys = ["datetime", "criteria", "nextMeetingDate", "keyConclusion", "attendees", "absentees", "remarks"] as const;
-  if (typeof r.date !== "string" || !parseDay(r.date)) return fail;
-  if (!textKeys.every((k) => isText(r[k]))) return fail;
-  if (!isRows(r.decisions, ["label", "text"])) return fail;
-  if (!isRows(r.projects, ["project", "progress", "followUp", "requirement"])) return fail;
-
-  const pick = <K extends string>(row: Record<string, string>, keys: K[]) =>
-    Object.fromEntries(keys.map((k) => [k, row[k]])) as Record<K, string>;
-  return {
-    ok: true,
-    value: {
-      date: r.date,
-      ...(Object.fromEntries(textKeys.map((k) => [k, r[k]])) as Record<(typeof textKeys)[number], string>),
-      decisions: r.decisions.map((d) => pick(d, ["label", "text"])),
-      projects: r.projects.map((p) => pick(p, ["project", "progress", "followUp", "requirement"])),
-    },
   };
 }

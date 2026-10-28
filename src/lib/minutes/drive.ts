@@ -2,6 +2,7 @@
 export const MINUTES_FOLDER_ID = "1uqSGe7eLYzadBBefU-gqwuu7dR617xoH";
 
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const GOOGLE_DOC = "application/vnd.google-apps.document";
 
 function env(name: string): string {
   const v = process.env[name];
@@ -21,11 +22,14 @@ async function accessToken(): Promise<string> {
   return (await res.json()).access_token;
 }
 
-/** 폴더 소유자 계정의 OAuth 리프레시 토큰으로 업로드한다 (서비스 계정은 개인 드라이브 저장 용량이 없다). 웹 링크를 돌려준다 */
-export async function uploadDocxToDrive(name: string, file: Buffer): Promise<string> {
+/**
+ * docx 를 구글 독스로 변환해 회의록 폴더에 올리고 웹 링크를 돌려준다.
+ * 폴더 소유자 계정의 OAuth 리프레시 토큰을 쓴다 (서비스 계정은 개인 드라이브 저장 용량이 없다).
+ */
+export async function uploadAsGoogleDoc(name: string, file: Buffer): Promise<string> {
   const token = await accessToken();
   const boundary = `vanova-${Date.now()}`;
-  const meta = JSON.stringify({ name, parents: [MINUTES_FOLDER_ID], mimeType: DOCX });
+  const meta = JSON.stringify({ name, parents: [MINUTES_FOLDER_ID], mimeType: GOOGLE_DOC });
   const body = Buffer.concat([
     Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n`),
     Buffer.from(`--${boundary}\r\nContent-Type: ${DOCX}\r\n\r\n`),

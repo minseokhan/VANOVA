@@ -4,7 +4,6 @@ import {
   buildMinutesPrompt,
   defaultMeetingDate,
   finalizeMinutes,
-  validateDraft,
   type MinutesDraft,
   minutesOutputSchema,
   parseRoster,
@@ -82,7 +81,7 @@ describe("assembleMinutes", () => {
 
   it("제목·파일명은 회의 날짜 기준", () => {
     expect(doc.title).toBe("10월 4주차 주간 회의 보고");
-    expect(doc.fileName).toBe("2026-10-26_VAN_개발회의_회의록.docx");
+    expect(doc.fileName).toBe("2026-10-26_VAN_개발회의_회의록");
   });
 
   it("일시·다음 회의는 날짜에서 계산", () => {
@@ -181,20 +180,5 @@ describe("finalizeMinutes", () => {
     expect(d.followUp[0].followUp).toBe("없음");
     expect(d.decisions).toEqual([{ decisionLabel: "-", decisionText: "없음" }]);
     expect(d.vars.nextMeetingLine).toBe("2026년 11월 02일(월) 22:00, 동일 Discord 라운지 채널");
-  });
-});
-
-describe("validateDraft", () => {
-  it("정상 초안은 그대로 통과", () => {
-    expect(validateDraft(JSON.parse(JSON.stringify(draft)))).toEqual({ ok: true, value: draft });
-  });
-
-  it("형식이 틀리거나 너무 길면 거절", () => {
-    expect(validateDraft(null).ok).toBe(false);
-    expect(validateDraft({ ...draft, date: "2026-13-01" }).ok).toBe(false);
-    expect(validateDraft({ ...draft, keyConclusion: 1 }).ok).toBe(false);
-    expect(validateDraft({ ...draft, decisions: [{ label: "a" }] }).ok).toBe(false);
-    expect(validateDraft({ ...draft, remarks: "가".repeat(MAX_NOTES + 1) }).ok).toBe(false);
-    expect(validateDraft({ ...draft, projects: "x" }).ok).toBe(false);
   });
 });

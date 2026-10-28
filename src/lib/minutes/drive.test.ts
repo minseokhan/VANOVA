@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MINUTES_FOLDER_ID, uploadDocxToDrive } from "./drive";
+import { MINUTES_FOLDER_ID, uploadAsGoogleDoc } from "./drive";
 
 const fetchMock = vi.fn();
 
@@ -19,9 +19,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("uploadDocxToDrive", () => {
-  it("리프레시 토큰으로 액세스 토큰을 받아 회의록 폴더에 업로드하고 링크를 돌려준다", async () => {
-    const link = await uploadDocxToDrive("a.docx", Buffer.from("DOCX"));
+describe("uploadAsGoogleDoc", () => {
+  it("리프레시 토큰으로 액세스 토큰을 받아 회의록 폴더에 구글 독스로 변환 업로드하고 링크를 돌려준다", async () => {
+    const link = await uploadAsGoogleDoc("회의록", Buffer.from("DOCX"));
     expect(link).toBe("https://drive.google.com/file/d/f1/view");
 
     const [tokenUrl, tokenInit] = fetchMock.mock.calls[0];
@@ -34,13 +34,14 @@ describe("uploadDocxToDrive", () => {
     expect(uploadInit.headers.Authorization).toBe("Bearer tok");
     const body = Buffer.from(uploadInit.body).toString();
     expect(body).toContain(`"parents":["${MINUTES_FOLDER_ID}"]`);
-    expect(body).toContain('"name":"a.docx"');
+    expect(body).toContain('"name":"회의록"');
+    expect(body).toContain('"mimeType":"application/vnd.google-apps.document"');
     expect(body).toContain("DOCX");
   });
 
   it("환경변수가 없으면 설정 안내 에러", async () => {
     vi.stubEnv("GOOGLE_REFRESH_TOKEN", "");
-    await expect(uploadDocxToDrive("a.docx", Buffer.from(""))).rejects.toThrow(/GOOGLE_REFRESH_TOKEN/);
+    await expect(uploadAsGoogleDoc("a.docx", Buffer.from(""))).rejects.toThrow(/GOOGLE_REFRESH_TOKEN/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -49,6 +50,6 @@ describe("uploadDocxToDrive", () => {
       .mockReset()
       .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "tok" })))
       .mockResolvedValueOnce(new Response("denied", { status: 403 }));
-    await expect(uploadDocxToDrive("a.docx", Buffer.from(""))).rejects.toThrow(/403/);
+    await expect(uploadAsGoogleDoc("a.docx", Buffer.from(""))).rejects.toThrow(/403/);
   });
 });
