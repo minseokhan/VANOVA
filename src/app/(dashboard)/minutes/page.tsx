@@ -6,7 +6,8 @@ import { defaultMeetingDate } from "@/lib/minutes/compose";
 import { monthRange } from "@/lib/minutes/rules";
 import { formatDate } from "@/lib/utils/date";
 import { MonthPicker } from "@/components/expenses/ExpenseActions";
-import { DeleteMinuteButton, GenerateMinuteForm, MinuteForm } from "@/components/minutes/MinuteForm";
+import { GenerateMinuteForm } from "@/components/minutes/GenerateMinute";
+import { DeleteMinuteButton, MinuteForm } from "@/components/minutes/MinuteForm";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -19,14 +20,16 @@ export default async function MinutesPage({ searchParams }: { searchParams: Prom
   const isAdmin = user.role === "ADMIN";
   const month = parseMonth((await searchParams).month ?? "") ?? currentMonth();
 
-  const [minutes, members] = await Promise.all([
+  const [minutes, members, notes] = await Promise.all([
     db.meetingMinute.findMany({
       where: { date: monthRange(month) },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       select: { id: true, date: true, title: true, fileUrl: true, author: { select: { name: true } } },
     }),
     isAdmin ? db.user.findMany({ where: { role: "MEMBER", approved: true }, select: { name: true } }) : [],
+    isAdmin ? db.meetingNote.findMany({ select: { date: true, notes: true } }) : [],
   ]);
+  const savedNotes = Object.fromEntries(notes.map((n) => [n.date.toISOString().slice(0, 10), n.notes]));
   // 참석 대상 기본값: 승인된 부원 + 작성하는 운영진 본인
   const roster = [...new Set([...members.map((m) => m.name), user.name])].sort((a, b) => a.localeCompare(b, "ko")).join(", ");
 
@@ -38,7 +41,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Prom
 
         {isAdmin && (
           <div className="flex flex-wrap items-start gap-3">
-            <GenerateMinuteForm defaultDate={defaultMeetingDate()} defaultRoster={roster} />
+            <GenerateMinuteForm defaultDate={defaultMeetingDate()} defaultRoster={roster} savedNotes={savedNotes} />
             <MinuteForm today={formatDate(new Date())} />
           </div>
         )}

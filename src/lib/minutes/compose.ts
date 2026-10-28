@@ -37,6 +37,20 @@ export type MinutesLlmOutput = {
 
 type Row<K extends string> = Record<K, string>;
 
+/** 운영진이 화면에서 검토·수정하는 초안. 명단은 쉼표로 구분한 문자열 */
+export type MinutesDraft = {
+  date: string;
+  datetime: string;
+  criteria: string;
+  nextMeetingDate: string;
+  keyConclusion: string;
+  attendees: string;
+  absentees: string;
+  remarks: string;
+  decisions: { label: string; text: string }[];
+  projects: { project: string; progress: string; followUp: string; requirement: string }[];
+};
+
 export type MinutesDoc = {
   title: string;
   fileName: string;
@@ -179,43 +193,103 @@ function orNone(v: string | undefined): string {
   return v?.trim() || NONE;
 }
 
-export function assembleMinutes(ctx: MinutesContext, out: MinutesLlmOutput): MinutesDoc {
+/** LLM 결과 + 계산값 → 화면에서 고칠 수 있는 초안 */
+export function assembleMinutes(ctx: MinutesContext, out: MinutesLlmOutput): MinutesDraft {
   const day = new Date(`${ctx.date}T00:00:00Z`);
-  const next = `${koreanDate(new Date(day.getTime() + 7 * DAY_MS))} 22:00`;
 
   const start = TIME_RE.test(out.startTime) ? out.startTime : "22:00";
   const end = out.endTime && TIME_RE.test(out.endTime) && minutesOf(out.endTime) > minutesOf(start) ? out.endTime : null;
   const time = end ? `${start}~${end} (총 ${minutesOf(end) - minutesOf(start)}분)` : start;
 
   const absentNames = new Set(out.absentees.map((a) => a.name).filter((n) => ctx.roster.includes(n)));
-  const attendees = ctx.roster.filter((n) => !absentNames.has(n));
-  const absentees = ctx.roster.filter((n) => absentNames.has(n));
-
   const byCode = new Map(out.projects.map((p) => [p.code, p]));
-  const rows = ctx.projects.map((p) => ({ project: `${p.code} ${p.title}`, llm: byCode.get(p.code) }));
 
-  const decisions = out.decisions
-    .filter((d) => d.text.trim())
-    .map((d) => ({ decisionLabel: d.label.trim() || "-", decisionText: d.text.trim() }));
+  return {
+    date: ctx.date,
+    datetime: `${koreanDate(day)} ${time}`,
+    criteria: `${ctx.projects.map((p) => p.code).join(", ")} 프로젝트 진행 상황 공유 및 피드백, 프로젝트별 후속 액션 계획 선정`,
+    nextMeetingDate: `${koreanDate(new Date(day.getTime() + 7 * DAY_MS))} 22:00`,
+    keyConclusion: out.keyConclusion.trim(),
+    attendees: ctx.roster.filter((n) => !absentNames.has(n)).join(", "),
+    absentees: ctx.roster.filter((n) => absentNames.has(n)).join(", "),
+    remarks: out.remarks.trim(),
+    decisions: out.decisions.map((d) => ({ label: d.label.trim(), text: d.text.trim() })),
+    projects: ctx.projects.map((p) => {
+      const llm = byCode.get(p.code);
+      return {
+        project: `${p.code} ${p.title}`,
+        progress: llm?.progress.trim() ?? "",
+        followUp: llm?.followUp.trim() ?? "",
+        requirement: llm?.requirement.trim() ?? "",
+      };
+    }),
+  };
+}
+
+/** "a, b" → 이름 목록. "없음"·빈 칸은 0명 */
+function names(raw: string): string[] {
+  return parseRoster(raw).filter((n) => n !== NONE);
+}
+
+/** 검토·수정을 마친 초안 → 양식에 채울 값. 인원수는 수정된 명단으로 다시 센다 */
+export function finalizeMinutes(d: MinutesDraft): MinutesDoc {
+  const day = new Date(`${d.date}T00:00:00Z`);
+  const attendees = names(d.attendees);
+  const absentees = names(d.absentees);
+  const decisions = d.decisions
+    .filter((x) => x.text.trim())
+    .map((x) => ({ decisionLabel: x.label.trim() || "-", decisionText: x.text.trim() }));
 
   return {
     title: `${day.getUTCMonth() + 1}월 ${Math.ceil(day.getUTCDate() / 7)}주차 주간 회의 보고`,
-    fileName: `${ctx.date}_VAN_개발회의_회의록.docx`,
+    fileName: `${d.date}_VAN_개발회의_회의록.docx`,
     vars: {
-      datetime: `${koreanDate(day)} ${time}`,
-      criteria: `${ctx.projects.map((p) => p.code).join(", ")} 프로젝트 진행 상황 공유 및 피드백, 프로젝트별 후속 액션 계획 선정`,
-      nextMeetingLine: `${next}, 동일 Discord 라운지 채널`,
-      nextMeetingDate: next,
-      keyConclusion: out.keyConclusion.trim(),
+      datetime: d.datetime.trim(),
+      criteria: d.criteria.trim(),
+      nextMeetingLine: `${d.nextMeetingDate.trim()}, 동일 Discord 라운지 채널`,
+      nextMeetingDate: d.nextMeetingDate.trim(),
+      keyConclusion: d.keyConclusion.trim(),
       attendCount: String(attendees.length),
       attendees: attendees.join(", ") || NONE,
       absentCount: String(absentees.length),
       absentees: absentees.join(", ") || NONE,
-      remarks: out.remarks.trim() || "특이사항 없음",
+      remarks: d.remarks.trim() || "특이사항 없음",
     },
     decisions: decisions.length ? decisions : [{ decisionLabel: "-", decisionText: NONE }],
-    progress: rows.map((r) => ({ project: r.project, progress: orNone(r.llm?.progress) })),
-    followUp: rows.map((r) => ({ project: r.project, followUp: orNone(r.llm?.followUp) })),
-    requirement: rows.map((r) => ({ project: r.project, requirement: orNone(r.llm?.requirement) })),
+    progress: d.projects.map((p) => ({ project: p.project, progress: orNone(p.progress) })),
+    followUp: d.projects.map((p) => ({ project: p.project, followUp: orNone(p.followUp) })),
+    requirement: d.projects.map((p) => ({ project: p.project, requirement: orNone(p.requirement) })),
+  };
+}
+
+const MAX_ROWS = 30;
+
+/** 클라이언트에서 돌아온 초안(신뢰 경계)을 구조·길이까지 확인한다 */
+export function validateDraft(raw: unknown): { ok: true; value: MinutesDraft } | { ok: false; error: string } {
+  const fail = { ok: false as const, error: "회의록 초안 형식이 올바르지 않습니다" };
+  const isText = (v: unknown): v is string => typeof v === "string" && v.length <= MAX_NOTES;
+  const isRows = (v: unknown, keys: string[]): v is Record<string, string>[] =>
+    Array.isArray(v) &&
+    v.length <= MAX_ROWS &&
+    v.every((r) => typeof r === "object" && r !== null && keys.every((k) => isText((r as Record<string, unknown>)[k])));
+
+  if (typeof raw !== "object" || raw === null) return fail;
+  const r = raw as Record<string, unknown>;
+  const textKeys = ["datetime", "criteria", "nextMeetingDate", "keyConclusion", "attendees", "absentees", "remarks"] as const;
+  if (typeof r.date !== "string" || !parseDay(r.date)) return fail;
+  if (!textKeys.every((k) => isText(r[k]))) return fail;
+  if (!isRows(r.decisions, ["label", "text"])) return fail;
+  if (!isRows(r.projects, ["project", "progress", "followUp", "requirement"])) return fail;
+
+  const pick = <K extends string>(row: Record<string, string>, keys: K[]) =>
+    Object.fromEntries(keys.map((k) => [k, row[k]])) as Record<K, string>;
+  return {
+    ok: true,
+    value: {
+      date: r.date,
+      ...(Object.fromEntries(textKeys.map((k) => [k, r[k]])) as Record<(typeof textKeys)[number], string>),
+      decisions: r.decisions.map((d) => pick(d, ["label", "text"])),
+      projects: r.projects.map((p) => pick(p, ["project", "progress", "followUp", "requirement"])),
+    },
   };
 }

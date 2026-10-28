@@ -3,6 +3,9 @@ import {
   assembleMinutes,
   buildMinutesPrompt,
   defaultMeetingDate,
+  finalizeMinutes,
+  validateDraft,
+  type MinutesDraft,
   minutesOutputSchema,
   parseRoster,
   validateGenerateInput,
@@ -74,7 +77,8 @@ describe("minutesOutputSchema", () => {
 });
 
 describe("assembleMinutes", () => {
-  const doc = assembleMinutes(ctx, llm);
+  const build = (o: MinutesLlmOutput) => finalizeMinutes(assembleMinutes(ctx, o));
+  const doc = build(llm);
 
   it("제목·파일명은 회의 날짜 기준", () => {
     expect(doc.title).toBe("10월 4주차 주간 회의 보고");
@@ -112,14 +116,14 @@ describe("assembleMinutes", () => {
   });
 
   it("종료 시각이 없거나 형식이 틀리면 시작 시각만, 시작이 틀리면 22:00", () => {
-    expect(assembleMinutes(ctx, { ...llm, endTime: null }).vars.datetime).toBe("2026년 10월 26일(월) 22:00");
-    expect(assembleMinutes(ctx, { ...llm, startTime: "밤 10시", endTime: "x" }).vars.datetime).toBe(
+    expect(build({ ...llm, endTime: null }).vars.datetime).toBe("2026년 10월 26일(월) 22:00");
+    expect(build({ ...llm, startTime: "밤 10시", endTime: "x" }).vars.datetime).toBe(
       "2026년 10월 26일(월) 22:00",
     );
   });
 
   it("불참·결정사항이 없을 때의 기본 문구", () => {
-    const d = assembleMinutes(ctx, { ...llm, absentees: [], remarks: " ", decisions: [] });
+    const d = build({ ...llm, absentees: [], remarks: " ", decisions: [] });
     expect(d.vars.absentees).toBe("없음");
     expect(d.vars.absentCount).toBe("0");
     expect(d.vars.attendCount).toBe("4");
@@ -128,7 +132,7 @@ describe("assembleMinutes", () => {
   });
 
   it("명단에 없는 불참자 이름은 무시", () => {
-    const d = assembleMinutes(ctx, { ...llm, absentees: [{ name: "외부인", reason: "?" }] });
+    const d = build({ ...llm, absentees: [{ name: "외부인", reason: "?" }] });
     expect(d.vars.absentCount).toBe("0");
   });
 });
@@ -147,5 +151,50 @@ describe("validateGenerateInput", () => {
     if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(["date", "notes", "roster"]);
     const long = validateGenerateInput({ date: "2026-10-26", notes: "가".repeat(MAX_NOTES + 1), roster: "a" });
     expect(long.ok).toBe(false);
+  });
+});
+
+const draft: MinutesDraft = {
+  date: "2026-10-26",
+  datetime: "2026년 10월 26일(월) 22:00",
+  criteria: "2-4 프로젝트 진행 상황 공유",
+  nextMeetingDate: "2026년 11월 02일(월) 22:00",
+  keyConclusion: "결론",
+  attendees: "박동진, 남유리, 한민석",
+  absentees: "없음",
+  remarks: "",
+  decisions: [{ label: "운영", text: "결정" }],
+  projects: [{ project: "2-4 MLI", progress: "진행", followUp: "", requirement: "없음" }],
+};
+
+describe("finalizeMinutes", () => {
+  it("수정한 명단으로 인원수를 다시 센다", () => {
+    const d = finalizeMinutes({ ...draft, attendees: "박동진, 남유리", absentees: "한민석, 성정헌" });
+    expect(d.vars.attendCount).toBe("2");
+    expect(d.vars.absentCount).toBe("2");
+    expect(finalizeMinutes(draft).vars.absentCount).toBe("0");
+  });
+
+  it("빈 칸은 기본 문구, 빈 결정 행은 버린다", () => {
+    const d = finalizeMinutes({ ...draft, decisions: [{ label: "", text: " " }] });
+    expect(d.vars.remarks).toBe("특이사항 없음");
+    expect(d.followUp[0].followUp).toBe("없음");
+    expect(d.decisions).toEqual([{ decisionLabel: "-", decisionText: "없음" }]);
+    expect(d.vars.nextMeetingLine).toBe("2026년 11월 02일(월) 22:00, 동일 Discord 라운지 채널");
+  });
+});
+
+describe("validateDraft", () => {
+  it("정상 초안은 그대로 통과", () => {
+    expect(validateDraft(JSON.parse(JSON.stringify(draft)))).toEqual({ ok: true, value: draft });
+  });
+
+  it("형식이 틀리거나 너무 길면 거절", () => {
+    expect(validateDraft(null).ok).toBe(false);
+    expect(validateDraft({ ...draft, date: "2026-13-01" }).ok).toBe(false);
+    expect(validateDraft({ ...draft, keyConclusion: 1 }).ok).toBe(false);
+    expect(validateDraft({ ...draft, decisions: [{ label: "a" }] }).ok).toBe(false);
+    expect(validateDraft({ ...draft, remarks: "가".repeat(MAX_NOTES + 1) }).ok).toBe(false);
+    expect(validateDraft({ ...draft, projects: "x" }).ok).toBe(false);
   });
 });
