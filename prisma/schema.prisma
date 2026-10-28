@@ -63,6 +63,8 @@ model User {
   adminType    AdminType?
   approved     Boolean    @default(false)
   createdAt    DateTime   @default(now())
+  /// 디스코드 사용자 ID. 문의 답변 알림에서 본인을 언급할 때 쓴다 (본인이 /settings에서 입력)
+  discordId    String?
 
   // 역량 프로필 (본인이 /settings에서 작성, 운영진이 열람)
   level     SkillLevel?

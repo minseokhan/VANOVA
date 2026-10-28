@@ -24,7 +24,7 @@ export function validateRegister(input: RegisterInput): RegisterResult {
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true };
 }
 
-export type AccountInput = { username: string; name: string };
+export type AccountInput = { username: string; name: string; discordId?: string };
 
 export function validateAccount(input: AccountInput): { ok: true } | { ok: false; errors: Partial<Record<keyof AccountInput, string>> } {
   const errors: Partial<Record<keyof AccountInput, string>> = {};
@@ -32,6 +32,8 @@ export function validateAccount(input: AccountInput): { ok: true } | { ok: false
   const n = nameError(input.name);
   if (u) errors.username = u;
   if (n) errors.name = n;
+  // 디스코드 사용자 ID(스노우플레이크). 사용자명(@alice)과 헷갈리기 쉬워 숫자만 받는다
+  if (input.discordId && !/^\d{17,20}$/.test(input.discordId)) errors.discordId = "디스코드 사용자 ID는 17~20자리 숫자입니다";
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true };
 }
 

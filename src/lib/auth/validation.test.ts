@@ -49,6 +49,17 @@ describe("validateAccount", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(["name", "username"]);
   });
+
+  it("디스코드 ID는 비워도 되고, 넣으면 17~20자리 숫자", () => {
+    const base = { username: "alice_01", name: "앨리스" };
+    expect(validateAccount({ ...base, discordId: "" })).toEqual({ ok: true });
+    expect(validateAccount({ ...base, discordId: "123456789012345678" })).toEqual({ ok: true });
+    for (const discordId of ["1234", "alice#1234", "@alice", "12345678901234567a"]) {
+      const r = validateAccount({ ...base, discordId });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(Object.keys(r.errors)).toEqual(["discordId"]);
+    }
+  });
 });
 
 describe("validatePasswordChange", () => {
