@@ -15,7 +15,7 @@ export default async function MembersPage() {
     throw e; // requireUser의 NEXT_REDIRECT 등은 그대로 전파
   }
   const users = await db.user.findMany({
-    orderBy: [{ role: "asc" }, { createdAt: "asc" }], // enum 선언 순서(ADMIN → MEMBER)대로 운영진이 위
+    orderBy: { createdAt: "asc" },
     select: {
       id: true, username: true, name: true, role: true, approved: true, createdAt: true, level: true, adminLevel: true,
       memberships: { select: { project: { select: { code: true } } }, orderBy: { project: { code: "asc" } } },
@@ -28,18 +28,27 @@ export default async function MembersPage() {
   return (
     <div className="space-y-8">
       <PageHeader title="멤버 관리" />
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">멤버 ({members.length})</h2>
-        {members.length === 0 ? (
-          <EmptyState message="승인된 멤버가 없습니다" />
-        ) : (
-          <MembersTable
-            members={members.map(({ memberships, ...u }) => ({ ...u, projectCodes: memberships.map((m) => m.project.code) }))}
-            meId={me.id}
-            adminCount={adminCount}
-          />
-        )}
-      </section>
+      {(
+        [
+          ["멤버", members.filter((u) => u.role !== "ADMIN"), "승인된 멤버가 없습니다"],
+          ["운영진", members.filter((u) => u.role === "ADMIN"), "운영진이 없습니다"],
+        ] as const
+      ).map(([title, list, empty]) => (
+        <section key={title}>
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">
+            {title} ({list.length})
+          </h2>
+          {list.length === 0 ? (
+            <EmptyState message={empty} />
+          ) : (
+            <MembersTable
+              members={list.map(({ memberships, ...u }) => ({ ...u, projectCodes: memberships.map((m) => m.project.code) }))}
+              meId={me.id}
+              adminCount={adminCount}
+            />
+          )}
+        </section>
+      ))}
       <section>
         <h2 className="mb-3 text-sm font-semibold text-slate-900">승인 대기 ({pending.length})</h2>
         {pending.length === 0 ? (
