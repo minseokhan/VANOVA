@@ -6,9 +6,11 @@ import { requireUser } from "@/lib/auth/guards";
 import { canEditProject } from "@/lib/auth/permissions";
 import { canTransitionStatus } from "@/lib/projects/features";
 import { POSITION_LABEL, PRIORITY_LABEL, PRIORITY_TONE, STATUS_LABEL, STATUS_TONE } from "@/lib/projects/labels";
+import type { WeeklyAttachment } from "@/lib/projects/info";
 import { calcProgress } from "@/lib/projects/progress";
 import { formatDate } from "@/lib/utils/date";
 import { linkify } from "@/lib/utils/linkify";
+import { getWeekStart } from "@/lib/utils/week";
 import { FeatureChecklist } from "@/components/projects/FeatureChecklist";
 import { PlanDocs } from "@/components/projects/PlanDocs";
 import { ProjectInfoPanel } from "@/components/projects/ProjectInfoPanel";
@@ -66,6 +68,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       members: { include: { user: { select: { id: true, name: true } } } },
       features: { orderBy: { order: "asc" } },
       weeklyUpdates: { orderBy: { weekStart: "desc" }, include: { author: { select: { name: true } } } },
+      weeklyDrafts: { where: { weekStart: getWeekStart(new Date()) }, include: { updatedBy: { select: { name: true } } } },
       planDocs: { orderBy: { createdAt: "desc" }, include: { uploadedBy: { select: { name: true } } } },
       questions: { orderBy: { createdAt: "desc" }, take: 5, include: { author: { select: { name: true } } } },
     },
@@ -73,6 +76,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   if (!project) notFound();
 
   const canEdit = canEditProject(user, project.members.map((m) => m.userId));
+  // 임시저장본은 편집 가능한 팀원에게만 보인다
+  const draft = canEdit ? (project.weeklyDrafts[0] ?? null) : null;
   const target = project.status === "DONE" ? "IN_PROGRESS" : "DONE";
   const canTransition = canEdit && canTransitionStatus(project.status, target, project.members.length);
   const transition = async () => {
@@ -156,7 +161,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 didThisWeek: w.didThisWeek,
                 planNextWeek: w.planNextWeek,
                 issues: w.issues,
+                attachments: w.attachments as WeeklyAttachment[],
               }))}
+              draft={
+                draft
+                  ? {
+                      didThisWeek: draft.didThisWeek,
+                      planNextWeek: draft.planNextWeek,
+                      issues: draft.issues ?? undefined,
+                      attachments: draft.attachments as WeeklyAttachment[],
+                      updatedByName: draft.updatedBy.name,
+                      updatedAt: draft.updatedAt,
+                    }
+                  : null
+              }
             />
           </Section>
           <Section
