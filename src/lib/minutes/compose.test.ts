@@ -86,9 +86,9 @@ describe("buildMinutesPrompt", () => {
 });
 
 describe("minutesOutputSchema", () => {
-  it("불참자 이름과 프로젝트 코드를 enum으로 제한", () => {
+  it("프로젝트 코드는 enum으로 제한하고, 불참자 이름은 명단 밖도 받는다", () => {
     const s = JSON.stringify(minutesOutputSchema(ctx));
-    expect(s).toContain('"enum":["박동진","남유리","성정헌","한민석"]');
+    expect(s).not.toContain('"enum":["박동진","남유리","성정헌","한민석"]');
     expect(s).toContain('"enum":["2-4","4-3"]');
   });
 });
@@ -154,9 +154,11 @@ describe("assembleMinutes", () => {
     expect(d.decisions).toEqual([{ decisionLabel: "-", decisionText: "없음" }]);
   });
 
-  it("명단에 없는 불참자 이름은 무시", () => {
-    const d = build({ ...llm, absentees: [{ name: "외부인", reason: "?" }] });
-    expect(d.vars.absentCount).toBe("0");
+  it("명단에 없는 불참자도 버리지 않고 불참으로 기록 (명단에 빠진 운영진 등)", () => {
+    const d = build({ ...llm, absentees: [{ name: "성정헌", reason: "팀플" }, { name: " 운영진A ", reason: "?" }] });
+    expect(d.vars.absentees).toBe("성정헌, 운영진A");
+    expect(d.vars.absentCount).toBe("2");
+    expect(d.vars.attendees).toBe("박동진, 남유리, 한민석");
   });
 });
 

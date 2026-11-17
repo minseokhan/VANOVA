@@ -124,7 +124,7 @@ export const MINUTES_SYSTEM_PROMPT = `당신은 VAN 학회 AI 혁신부(VANOVA)�
 
 ## 칸별 작성 기준
 - keyConclusion(핵심 결론): 이번 회의 전체를 1~2문장으로 요약.
-- absentees(불참자): 메모에서 불참했다고 언급된 사람만 넣는다. 이름은 반드시 제공된 참석 대상 명단의 표기 그대로 쓴다. "나머지는 다 참여"라면 나머지는 넣지 않는다.
+- absentees(불참자): 메모에서 불참했다고 언급된 사람만 넣는다. 명단에 있는 사람이면 명단의 표기 그대로, 명단에 없는 사람이면 메모의 표기 그대로 쓴다. "나머지는 다 참여"라면 나머지는 넣지 않는다.
 - remarks(특이사항): 불참자별 사유를 "OOO은(는) ~(으)로 인해 불참함." 형식으로 쓴다. 불참자가 없고 다른 특이사항도 없으면 빈 문자열.
 - decisions(핵심 결정사항): 메모에서 실제로 결정·합의된 사항만, 있는 개수만큼 쓴다. 억지로 개수를 채우지 않는다. 없으면 빈 배열. label 은 해당 프로젝트 번호(예: "4-3") 또는 "운영"·"공통" 같은 짧은 구분, text 는 결정 내용.
 - projects: 제공된 주요 프로젝트마다 하나씩, code 는 프로젝트 번호.
@@ -164,7 +164,7 @@ ${ctx.notes}
   return { system: MINUTES_SYSTEM_PROMPT, user };
 }
 
-/** 구조화 출력용 JSON 스키마. 불참자·프로젝트 코드는 enum 으로 묶어 명단 밖의 값이 나오지 않게 한다 */
+/** 구조화 출력용 JSON 스키마. 프로젝트 코드는 enum 으로 묶는다. 불참자는 명단에서 빠진 사람도 있을 수 있어 묶지 않는다 */
 export function minutesOutputSchema(ctx: MinutesContext): Record<string, unknown> {
   const str = { type: "string" };
   const obj = (properties: Record<string, unknown>) => ({
@@ -177,7 +177,7 @@ export function minutesOutputSchema(ctx: MinutesContext): Record<string, unknown
     startTime: str,
     endTime: { type: ["string", "null"] },
     keyConclusion: str,
-    absentees: { type: "array", items: obj({ name: { type: "string", enum: ctx.roster }, reason: str }) },
+    absentees: { type: "array", items: obj({ name: str, reason: str }) },
     remarks: str,
     decisions: { type: "array", items: obj({ label: str, text: str }) },
     projects: {
@@ -215,7 +215,9 @@ export function assembleMinutes(ctx: MinutesContext, out: MinutesLlmOutput): Min
   const end = out.endTime && TIME_RE.test(out.endTime) && minutesOf(out.endTime) > minutesOf(start) ? out.endTime : null;
   const time = end ? `${start}~${end} (총 ${minutesOf(end) - minutesOf(start)}분)` : start;
 
-  const absentNames = new Set(out.absentees.map((a) => a.name).filter((n) => ctx.roster.includes(n)));
+  // 명단에 없는 불참자도 버리지 않는다 (명단에서 빠진 운영진 등). 명단에 있는 사람이 먼저, 나머지는 뒤에
+  const absentNames = new Set(out.absentees.map((a) => a.name.trim()).filter(Boolean));
+  const outsiders = [...absentNames].filter((n) => !ctx.roster.includes(n));
   const byCode = new Map(out.projects.map((p) => [p.code, p]));
 
   return {
@@ -225,7 +227,7 @@ export function assembleMinutes(ctx: MinutesContext, out: MinutesLlmOutput): Min
     nextMeetingDate: `${koreanDate(new Date(day.getTime() + 7 * DAY_MS))} 22:00`,
     keyConclusion: out.keyConclusion.trim(),
     attendees: ctx.roster.filter((n) => !absentNames.has(n)).join(", "),
-    absentees: ctx.roster.filter((n) => absentNames.has(n)).join(", "),
+    absentees: [...ctx.roster.filter((n) => absentNames.has(n)), ...outsiders].join(", "),
     remarks: out.remarks.trim(),
     decisions: out.decisions.map((d) => ({ label: d.label.trim(), text: d.text.trim() })),
     projects: ctx.projects.map((p) => {
