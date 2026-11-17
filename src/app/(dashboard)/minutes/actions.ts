@@ -9,6 +9,7 @@ import { renderMinutesDocx, TEMPLATE_PATH } from "@/lib/minutes/docx";
 import { uploadAsGoogleDoc } from "@/lib/minutes/drive";
 import { generateMinutesContent } from "@/lib/minutes/llm";
 import { validateMinute } from "@/lib/minutes/rules";
+import type { WeeklyAttachment } from "@/lib/projects/info";
 import { getWeekStart } from "@/lib/utils/week";
 import type { FormState } from "@/app/(dashboard)/projects/[id]/actions";
 
@@ -56,7 +57,7 @@ export async function generateMinute(_prev: FormState, fd: FormData): Promise<Fo
       title: true,
       weeklyUpdates: {
         where: { weekStart },
-        select: { didThisWeek: true, planNextWeek: true, issues: true, author: { select: { name: true } } },
+        select: { didThisWeek: true, planNextWeek: true, issues: true, attachments: true, author: { select: { name: true } } },
       },
     },
   });
@@ -69,18 +70,42 @@ export async function generateMinute(_prev: FormState, fd: FormData): Promise<Fo
     projects: projects.map(({ code, title, weeklyUpdates: [r] }) => ({
       code,
       title,
-      report: r ? { author: r.author.name, didThisWeek: r.didThisWeek, planNextWeek: r.planNextWeek, issues: r.issues } : null,
+      report: r
+        ? {
+            author: r.author.name,
+            didThisWeek: r.didThisWeek,
+            planNextWeek: r.planNextWeek,
+            issues: r.issues,
+            attachments: r.attachments as WeeklyAttachment[],
+          }
+        : null,
     })),
   };
 
   try {
     const doc = finalizeMinutes(assembleMinutes(ctx, await generateMinutesContent(ctx)));
-    const url = await uploadAsGoogleDoc(doc.fileName, await renderMinutesDocx(await readFile(TEMPLATE_PATH), doc));
+    const images = await fetchImages(doc.progress.flatMap((p) => p.images.map((i) => i.url)));
+    const url = await uploadAsGoogleDoc(doc.fileName, await renderMinutesDocx(await readFile(TEMPLATE_PATH), doc, images));
     return { ok: true, url };
   } catch (e) {
     console.error("[generateMinute]", e);
     return { error: e instanceof Error ? e.message : "회의록 생성에 실패했습니다" };
   }
+}
+
+/** 주간 보고 사진을 내려받는다. 실패한 것은 빠지고, 문서에는 링크로 남는다 */
+async function fetchImages(urls: string[]): Promise<Map<string, Buffer>> {
+  const entries = await Promise.all(
+    urls.map(async (url) => {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        return res.ok ? ([url, Buffer.from(await res.arrayBuffer())] as const) : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return new Map(entries.filter((e) => e !== null));
 }
 
 export async function deleteMinute(id: string): Promise<{ error?: string }> {

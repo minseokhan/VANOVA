@@ -44,7 +44,7 @@ const doc: MinutesDoc = {
     { decisionLabel: "운영", decisionText: "결정 A" },
     { decisionLabel: "4-3", decisionText: "결정 B" },
   ],
-  progress: [{ project: "2-4 MLI", progress: "진행 X" }],
+  progress: [{ project: "2-4 MLI", progress: "진행 X", images: [] }],
   followUp: [{ project: "2-4 MLI", followUp: "후속 Y" }],
   requirement: [{ project: "2-4 MLI", requirement: "없음" }],
 };
@@ -70,5 +70,51 @@ describe("renderMinutesDocx", () => {
     expect(cells(followUp)[3]).toContain("후속 Y");
     expect(cells(tables[3])[2]).toContain("운영");
     expect(cells(tables[3])[3]).toContain("결정 A");
+  });
+
+  it("진행 상황 칸에 사진을 이미지로 넣고, 못 가져온 사진은 링크로 남긴다", async () => {
+    const png = Buffer.alloc(33);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png, 0);
+    png.write("IHDR", 12, "ascii");
+    png.writeUInt32BE(400, 16);
+    png.writeUInt32BE(200, 20);
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x64, 0x00, 0xc8, 0x01, 0x00, 0x00, 0x00]);
+    const withImages: MinutesDoc = {
+      ...doc,
+      progress: [
+        {
+          project: "2-4 MLI",
+          progress: "진행 X\n\n[첨부]",
+          images: [
+            { title: "시안", url: "https://b/a.png" },
+            { title: "사진", url: "https://b/b.jpg" },
+            { title: "실패 사진", url: "https://b/missing.png" },
+          ],
+        },
+      ],
+    };
+    const images = new Map([
+      ["https://b/a.png", png],
+      ["https://b/b.jpg", jpeg],
+    ]);
+    const zip = await JSZip.loadAsync(await renderMinutesDocx(await readFile(TEMPLATE_PATH), withImages, images));
+    const xml = await zip.file("word/document.xml")!.async("string");
+    const rels = await zip.file("word/_rels/document.xml.rels")!.async("string");
+    const types = await zip.file("[Content_Types].xml")!.async("string");
+
+    // 양식에 원래 있던 그림은 빼고, 이번에 넣은 사진만 센다
+    expect(xml.match(/r:embed="rIdVanovaImg\d+"/g)).toHaveLength(2);
+    expect(xml).not.toContain("⟦");
+    expect(xml).toContain('r:embed="rIdVanovaImg1"');
+    expect(xml).toContain('<wp:extent cx="3240000" cy="1620000"/>');
+    expect(xml).toContain("- 실패 사진: https://b/missing.png");
+    expect(rels).toContain('Id="rIdVanovaImg1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/vanova-img-1.png"');
+    expect(rels).toContain('Target="media/vanova-img-2.jpeg"');
+    expect(zip.file("word/media/vanova-img-1.png")).not.toBeNull();
+    expect(zip.file("word/media/vanova-img-2.jpeg")).not.toBeNull();
+    expect(types).toContain('Extension="jpeg"');
+    // 사진은 진행 상황 표의 값 칸 안에 들어간다
+    const progressTable = xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g)![4];
+    expect(progressTable.match(/<w:drawing>/g)).toHaveLength(2);
   });
 });
