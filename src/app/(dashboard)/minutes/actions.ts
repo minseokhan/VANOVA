@@ -93,13 +93,21 @@ export async function generateMinute(_prev: FormState, fd: FormData): Promise<Fo
   }
 }
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 /** 주간 보고 사진을 내려받는다. 우리 Blob 주소만, 리다이렉트 없이. 실패한 것은 빠지고 문서에는 링크로 남는다 */
 async function fetchImages(urls: string[]): Promise<Map<string, Buffer>> {
   const entries = await Promise.all(
     urls.filter(isBlobUrl).map(async (url) => {
       try {
         const res = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(10_000) });
-        return res.ok ? ([url, Buffer.from(await res.arrayBuffer())] as const) : null;
+        // 회의록에 넣기엔 너무 큰 사진은 받지 않고 링크로 남긴다
+        const size = Number(res.headers.get("content-length"));
+        if (!res.ok || !size || size > MAX_IMAGE_BYTES) {
+          await res.body?.cancel();
+          return null;
+        }
+        return [url, Buffer.from(await res.arrayBuffer())] as const;
       } catch {
         return null;
       }
