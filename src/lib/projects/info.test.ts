@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   LANGUAGE_OPTIONS,
   parseProjectInfoForm,
+  isBlobUrl,
   isImageUrl,
   parseAttachments,
   parseWeeklyForm,
@@ -137,5 +138,14 @@ describe("parseWeeklyForm", () => {
     f.set("didThisWeek", " 했음 ");
     f.set("planNextWeek", "할 것");
     expect(parseWeeklyForm(f)).toEqual({ didThisWeek: "했음", planNextWeek: "할 것", issues: "" });
+  });
+});
+
+describe("isBlobUrl", () => {
+  it("Vercel Blob https 만 true, 형식이 틀리면 예외 없이 false", () => {
+    expect(isBlobUrl("https://x.public.blob.vercel-storage.com/a.png")).toBe(true);
+    expect(isBlobUrl("http://x.public.blob.vercel-storage.com/a.png")).toBe(false);
+    expect(isBlobUrl("https://169.254.169.254/latest")).toBe(false);
+    expect(isBlobUrl("not a url")).toBe(false);
   });
 });
