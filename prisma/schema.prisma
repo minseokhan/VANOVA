@@ -85,6 +85,7 @@ model User {
   memberships      ProjectMember[]
   createdFeatures  Feature[]       @relation("FeatureCreatedBy")
   weeklyUpdates    WeeklyUpdate[]
+  weeklyDrafts     WeeklyDraft[]
   uploadedPlanDocs PlanDoc[]
   questions        Question[]      @relation("QuestionAuthor")
   answers          Question[]      @relation("QuestionAnsweredBy")
@@ -122,6 +123,7 @@ model Project {
   members       ProjectMember[]
   features      Feature[]
   weeklyUpdates WeeklyUpdate[]
+  weeklyDrafts  WeeklyDraft[]
   planDocs      PlanDoc[]
   questions     Question[]
 }
@@ -162,6 +164,8 @@ model WeeklyUpdate {
   didThisWeek  String
   planNextWeek String
   issues       String?
+  /// [{ kind: "FILE" | "LINK", title, url }]
+  attachments  Json     @default("[]")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -169,6 +173,26 @@ model WeeklyUpdate {
   author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, weekStart])
+}
+
+/**
+ * 주간 보고 임시저장본. 프로젝트·주차당 하나, 마지막 저장자가 덮어쓴다.
+ * 제출 전이라 보고로 집계되지 않으며, 제출하면 삭제된다
+ */
+model WeeklyDraft {
+  projectId    String
+  weekStart    DateTime @db.Date
+  didThisWeek  String
+  planNextWeek String
+  issues       String?
+  attachments  Json     @default("[]")
+  updatedById  String
+  updatedAt    DateTime @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatedBy User    @relation(fields: [updatedById], references: [id], onDelete: Cascade)
+
+  @@id([projectId, weekStart])
 }
 
 /**
