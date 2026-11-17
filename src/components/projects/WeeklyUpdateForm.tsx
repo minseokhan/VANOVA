@@ -57,13 +57,13 @@ export function WeeklyUpdateForm({
         )}
       </div>
       <Field id="didThisWeek" label="이번 주 한 일" error={errors.didThisWeek}>
-        <Textarea id="didThisWeek" name="didThisWeek" defaultValue={initial?.didThisWeek} rows={3} maxLength={2000} required />
+        <Textarea id="didThisWeek" name="didThisWeek" defaultValue={initial?.didThisWeek} rows={7} maxLength={2000} required />
       </Field>
       <Field id="planNextWeek" label="다음 주 계획" error={errors.planNextWeek}>
-        <Textarea id="planNextWeek" name="planNextWeek" defaultValue={initial?.planNextWeek} rows={3} maxLength={2000} required />
+        <Textarea id="planNextWeek" name="planNextWeek" defaultValue={initial?.planNextWeek} rows={7} maxLength={2000} required />
       </Field>
       <Field id="issues" label="이슈 · 막힌 점 (선택)" error={errors.issues}>
-        <Textarea id="issues" name="issues" defaultValue={initial?.issues ?? ""} rows={2} maxLength={2000} />
+        <Textarea id="issues" name="issues" defaultValue={initial?.issues ?? ""} rows={2} maxLength={2000} className="min-h-20!" />
       </Field>
       <div className="space-y-2">
         <p className="flex items-baseline gap-2 text-sm font-medium text-slate-700">
