@@ -22,7 +22,17 @@ const ctx: MinutesContext = {
     {
       code: "4-3",
       title: "AI 기사 제작·발행 시스템",
-      report: { author: "남유리", didThisWeek: "역할 분배", planNextWeek: "본격 개발", issues: "팀원 업데이트 필요" },
+      report: {
+        author: "남유리",
+        didThisWeek: "역할 분배",
+        planNextWeek: "본격 개발",
+        issues: "팀원 업데이트 필요",
+        attachments: [
+          { kind: "FILE", title: "메인 시안", url: "https://x.public.blob.vercel-storage.com/weekly/p/main-abc.png" },
+          { kind: "LINK", title: "피그마", url: "https://figma.com/file/1" },
+          { kind: "FILE", title: "기획서", url: "https://x.public.blob.vercel-storage.com/weekly/p/plan-abc.pdf" },
+        ],
+      },
     },
   ],
 };
@@ -55,6 +65,14 @@ describe("parseRoster", () => {
 });
 
 describe("buildMinutesPrompt", () => {
+  it("첨부는 종류와 제목만 넘기고 URL은 넘기지 않는다", () => {
+    const { system, user } = buildMinutesPrompt(ctx);
+    expect(user).toContain("[첨부]\n- 사진: 메인 시안\n- 링크: 피그마\n- 파일: 기획서");
+    expect(user).not.toContain("blob.vercel-storage.com");
+    expect(user).not.toContain("figma.com");
+    expect(system).toContain("URL");
+  });
+
   it("명단·주간 보고·자유 메모를 모두 담고 미제출을 표시", () => {
     const { system, user } = buildMinutesPrompt(ctx);
     expect(system).toContain("회의록");
@@ -107,8 +125,14 @@ describe("assembleMinutes", () => {
 
   it("프로젝트 행은 주요 프로젝트 순서대로, LLM이 빠뜨린 칸은 없음", () => {
     expect(doc.progress).toEqual([
-      { project: "2-4 MLI 한국지부 홈페이지 전면 개편", progress: "없음" },
-      { project: "4-3 AI 기사 제작·발행 시스템", progress: "역할 분배 완료" },
+      { project: "2-4 MLI 한국지부 홈페이지 전면 개편", progress: "없음", images: [] },
+      {
+        project: "4-3 AI 기사 제작·발행 시스템",
+        // 사진은 이미지로 따로 넣고, 링크·파일은 URL을 시스템이 그대로 붙인다
+        progress:
+          "역할 분배 완료\n\n[첨부]\n- 피그마: https://figma.com/file/1\n- 기획서: https://x.public.blob.vercel-storage.com/weekly/p/plan-abc.pdf",
+        images: [{ title: "메인 시안", url: "https://x.public.blob.vercel-storage.com/weekly/p/main-abc.png" }],
+      },
     ]);
     expect(doc.requirement[0].requirement).toBe("없음");
     expect(doc.followUp[1].followUp).toBe("본격 개발 착수");

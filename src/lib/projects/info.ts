@@ -106,9 +106,14 @@ export function parseAttachments(raw: string): { ok: true; value: WeeklyAttachme
   return { ok: true, value };
 }
 
-function isBlobUrl(s: string): boolean {
-  const u = new URL(s);
-  return u.protocol === "https:" && u.hostname.endsWith(".blob.vercel-storage.com");
+/** 우리 Vercel Blob 스토어의 https URL 인지 */
+export function isBlobUrl(s: string): boolean {
+  try {
+    const u = new URL(s);
+    return u.protocol === "https:" && u.hostname.endsWith(".blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
 }
 
 export function isImageUrl(url: string): boolean {
