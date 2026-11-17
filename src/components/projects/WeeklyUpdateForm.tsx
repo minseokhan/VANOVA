@@ -1,5 +1,6 @@
 "use client";
 
+import { Paperclip } from "lucide-react";
 import { useActionState, useState } from "react";
 import { submitWeeklyUpdate, type FormState } from "@/app/(dashboard)/projects/[id]/actions";
 import { WeeklyAttachmentList } from "@/components/projects/WeeklyAttachmentList";
@@ -65,7 +66,12 @@ export function WeeklyUpdateForm({
         <Textarea id="issues" name="issues" defaultValue={initial?.issues ?? ""} rows={2} maxLength={2000} />
       </Field>
       <div className="space-y-2">
-        <p className="text-sm font-medium text-slate-700">첨부 (선택)</p>
+        <p className="flex items-baseline gap-2 text-sm font-medium text-slate-700">
+          첨부 (선택)
+          <span className="text-xs font-normal text-slate-400">
+            {attachments.length}/{MAX_ATTACHMENTS}
+          </span>
+        </p>
         <WeeklyAttachmentList items={attachments} onRemove={(i) => setAttachments((l) => l.filter((_, j) => j !== i))} />
         {attachments.length < MAX_ATTACHMENTS && (
           <AttachmentAdder projectId={projectId} onAdd={(a) => setAttachments((l) => [...l, a])} />
@@ -97,9 +103,13 @@ function AttachmentAdder({ projectId, onAdd }: { projectId: string; onAdd: (a: W
 
   if (!open) {
     return (
-      <Button variant="text" size="sm" onClick={() => setOpen(true)}>
-        + 사진 · 파일 · 링크 첨부
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="secondary" size="sm" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5">
+          <Paperclip size={14} aria-hidden />
+          사진 · 파일 · 링크 첨부
+        </Button>
+        <span className="text-xs text-slate-400">파일은 20MB 이하</span>
+      </div>
     );
   }
 
