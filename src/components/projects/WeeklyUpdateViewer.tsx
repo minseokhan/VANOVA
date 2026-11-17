@@ -10,8 +10,8 @@ import { formatWeekLabel } from "@/lib/utils/week";
 
 function Entry({ label, text }: { label: string; text: string }) {
   return (
-    <div>
-      <dt className="text-xs font-medium text-slate-600">{label}</dt>
+    <div className="py-3 first:pt-0 last:pb-0">
+      <dt className="mb-1.5 border-l-2 border-navy-500 pl-2 text-sm font-semibold text-slate-900">{label}</dt>
       <dd className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{text}</dd>
     </div>
   );
@@ -56,12 +56,12 @@ export function WeeklyUpdateViewer({ updates, currentId }: { updates: WeeklyUpda
         </span>
       </div>
       <article className="rounded-md border border-slate-200 p-4">
-        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3 text-xs text-slate-500">
           <span className="font-medium">{formatWeekLabel(w.weekStart)}</span>
           <span>· {w.authorName}</span>
           {w.id === currentId && <Badge tone="navy">이번 주</Badge>}
         </div>
-        <dl className="space-y-2">
+        <dl className="divide-y divide-slate-100">
           <Entry label="이번 주 한 일" text={w.didThisWeek} />
           <Entry label="다음 주 계획" text={w.planNextWeek} />
           {w.issues && <Entry label="이슈 · 막힌 점" text={w.issues} />}
