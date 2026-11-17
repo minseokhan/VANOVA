@@ -1,3 +1,5 @@
+import { validatePlanLink } from "@/lib/plan-docs/validation";
+
 export const LANGUAGE_OPTIONS: string[] = ["TypeScript", "Python", "JavaScript", "Java", "Kotlin", "Swift", "Go", "기타"];
 
 export type ProjectInfoInput = {
@@ -55,15 +57,17 @@ export function parseProjectInfoForm(fd: FormData): ProjectInfoInput {
 export type WeeklyInput = { didThisWeek: string; planNextWeek: string; issues?: string };
 export type WeeklyValue = { didThisWeek: string; planNextWeek: string; issues: string | null };
 
+/** draft(임시저장)는 빈 필드를 허용하고 길이만 검사한다 */
 export function validateWeekly(
   i: WeeklyInput,
+  { draft = false }: { draft?: boolean } = {},
 ): { ok: true; value: WeeklyValue } | { ok: false; errors: Partial<Record<keyof WeeklyInput, string>> } {
   const errors: Partial<Record<keyof WeeklyInput, string>> = {};
   const didThisWeek = i.didThisWeek.trim();
   const planNextWeek = i.planNextWeek.trim();
   const issues = i.issues?.trim() || null;
-  if (!didThisWeek || didThisWeek.length > 2000) errors.didThisWeek = "이번 주 한 일은 1~2000자여야 합니다";
-  if (!planNextWeek || planNextWeek.length > 2000) errors.planNextWeek = "다음 주 계획은 1~2000자여야 합니다";
+  if ((!draft && !didThisWeek) || didThisWeek.length > 2000) errors.didThisWeek = "이번 주 한 일은 1~2000자여야 합니다";
+  if ((!draft && !planNextWeek) || planNextWeek.length > 2000) errors.planNextWeek = "다음 주 계획은 1~2000자여야 합니다";
   if (issues && issues.length > 2000) errors.issues = "이슈는 2000자 이하여야 합니다";
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value: { didThisWeek, planNextWeek, issues } };
 }
@@ -71,4 +75,35 @@ export function validateWeekly(
 export function parseWeeklyForm(fd: FormData): WeeklyInput {
   const get = (k: string) => String(fd.get(k) ?? "").trim();
   return { didThisWeek: get("didThisWeek"), planNextWeek: get("planNextWeek"), issues: get("issues") };
+}
+
+export type WeeklyAttachment = { kind: "FILE" | "LINK"; title: string; url: string };
+export const MAX_ATTACHMENTS = 10;
+
+/** 폼의 attachments(JSON 문자열) 파싱·검증 */
+export function parseAttachments(raw: string): { ok: true; value: WeeklyAttachment[] } | { ok: false; error: string } {
+  if (!raw) return { ok: true, value: [] };
+  let list: unknown;
+  try {
+    list = JSON.parse(raw);
+  } catch {
+    return { ok: false, error: "첨부 형식이 잘못되었습니다" };
+  }
+  if (!Array.isArray(list)) return { ok: false, error: "첨부 형식이 잘못되었습니다" };
+  if (list.length > MAX_ATTACHMENTS) return { ok: false, error: `첨부는 ${MAX_ATTACHMENTS}개까지입니다` };
+  const value: WeeklyAttachment[] = [];
+  for (const a of list as Partial<Record<string, unknown>>[]) {
+    const kind = a?.kind;
+    const title = String(a?.title ?? "").trim();
+    const url = String(a?.url ?? "").trim();
+    if (kind !== "FILE" && kind !== "LINK") return { ok: false, error: "첨부 형식이 잘못되었습니다" };
+    const r = validatePlanLink(title, url);
+    if (!r.ok) return { ok: false, error: r.errors.title ?? r.errors.url ?? "첨부 형식이 잘못되었습니다" };
+    value.push({ kind, title, url });
+  }
+  return { ok: true, value };
+}
+
+export function isImageUrl(url: string): boolean {
+  return /\.(png|jpe?g)(\?|#|$)/i.test(url);
 }

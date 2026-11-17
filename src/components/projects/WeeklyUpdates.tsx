@@ -1,6 +1,8 @@
-import { WeeklyUpdateForm } from "@/components/projects/WeeklyUpdateForm";
+import { WeeklyAttachmentList } from "@/components/projects/WeeklyAttachmentList";
+import { WeeklyUpdateForm, type WeeklyFormInitial } from "@/components/projects/WeeklyUpdateForm";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import type { WeeklyAttachment } from "@/lib/projects/info";
 import { formatWeekLabel, getWeekStart, isCurrentWeek } from "@/lib/utils/week";
 
 export type WeeklyUpdateItem = {
@@ -10,7 +12,10 @@ export type WeeklyUpdateItem = {
   didThisWeek: string;
   planNextWeek: string;
   issues: string | null;
+  attachments: WeeklyAttachment[];
 };
+
+export type WeeklyDraftItem = WeeklyFormInitial & { updatedByName: string; updatedAt: Date };
 
 function Entry({ label, text }: { label: string; text: string }) {
   return (
@@ -21,7 +26,17 @@ function Entry({ label, text }: { label: string; text: string }) {
   );
 }
 
-export function WeeklyUpdates({ projectId, canEdit, updates }: { projectId: string; canEdit: boolean; updates: WeeklyUpdateItem[] }) {
+export function WeeklyUpdates({
+  projectId,
+  canEdit,
+  updates,
+  draft,
+}: {
+  projectId: string;
+  canEdit: boolean;
+  updates: WeeklyUpdateItem[];
+  draft: WeeklyDraftItem | null;
+}) {
   const current = updates.find((u) => isCurrentWeek(u.weekStart)) ?? null;
   return (
     <div className="space-y-4">
@@ -29,7 +44,17 @@ export function WeeklyUpdates({ projectId, canEdit, updates }: { projectId: stri
         <WeeklyUpdateForm
           projectId={projectId}
           weekLabel={formatWeekLabel(getWeekStart(new Date()))}
-          current={current && { didThisWeek: current.didThisWeek, planNextWeek: current.planNextWeek, issues: current.issues ?? undefined }}
+          initial={
+            draft ??
+            (current && {
+              didThisWeek: current.didThisWeek,
+              planNextWeek: current.planNextWeek,
+              issues: current.issues ?? undefined,
+              attachments: current.attachments,
+            })
+          }
+          submitted={current !== null}
+          draft={draft && { by: draft.updatedByName, at: draft.updatedAt }}
         />
       )}
       {updates.length === 0 ? (
@@ -48,6 +73,11 @@ export function WeeklyUpdates({ projectId, canEdit, updates }: { projectId: stri
                 <Entry label="다음 주 계획" text={w.planNextWeek} />
                 {w.issues && <Entry label="이슈 · 막힌 점" text={w.issues} />}
               </dl>
+              {w.attachments.length > 0 && (
+                <div className="mt-3">
+                  <WeeklyAttachmentList items={w.attachments} />
+                </div>
+              )}
             </li>
           ))}
         </ol>

@@ -8,6 +8,7 @@ import { requireAdmin, requireUser } from "@/lib/auth/guards";
 import { canEditProject } from "@/lib/auth/permissions";
 import { canTransitionStatus, nextOrder, validateFeatureTitle } from "@/lib/projects/features";
 import {
+  parseAttachments,
   parseProjectInfoForm,
   parseWeeklyForm,
   validateProjectInfo,
@@ -88,20 +89,30 @@ export async function updateProjectInfo(
 }
 
 /** 이번 주(KST 월요일 기준) 보고를 upsert — 같은 주 재제출은 덮어쓰고 작성자를 갱신 */
+/** intent=draft 면 임시저장(팀원 공유, 보고 미집계), 아니면 제출(임시저장본 삭제) */
 export async function submitWeeklyUpdate(
   projectId: string,
   _prev: FormState<keyof WeeklyInput>,
   fd: FormData,
 ): Promise<FormState<keyof WeeklyInput>> {
   const { user } = await requireEditor(projectId);
-  const r = validateWeekly(parseWeeklyForm(fd));
+  const draft = fd.get("intent") === "draft";
+  const r = validateWeekly(parseWeeklyForm(fd), { draft });
   if (!r.ok) return { fieldErrors: r.errors };
+  const a = parseAttachments(String(fd.get("attachments") ?? ""));
+  if (!a.ok) return { error: a.error };
   const weekStart = getWeekStart(new Date());
-  await db.weeklyUpdate.upsert({
-    where: { projectId_weekStart: { projectId, weekStart } },
-    create: { projectId, weekStart, authorId: user.id, ...r.value },
-    update: { authorId: user.id, ...r.value },
-  });
+  const key = { projectId, weekStart };
+  if (draft) {
+    const data = { ...r.value, attachments: a.value, updatedById: user.id };
+    await db.weeklyDraft.upsert({ where: { projectId_weekStart: key }, create: { ...key, ...data }, update: data });
+  } else {
+    const data = { ...r.value, attachments: a.value, authorId: user.id };
+    await db.$transaction([
+      db.weeklyUpdate.upsert({ where: { projectId_weekStart: key }, create: { ...key, ...data }, update: data }),
+      db.weeklyDraft.deleteMany({ where: key }),
+    ]);
+  }
   revalidate(projectId);
   return {};
 }

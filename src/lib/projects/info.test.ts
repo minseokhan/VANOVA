@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   LANGUAGE_OPTIONS,
   parseProjectInfoForm,
+  isImageUrl,
+  parseAttachments,
   parseWeeklyForm,
   validateProjectInfo,
   validateWeekly,
@@ -85,6 +87,41 @@ describe("validateWeekly", () => {
     if (!r1.ok) expect(Object.keys(r1.errors).sort()).toEqual(["didThisWeek", "issues"]);
     const r2 = validateWeekly({ didThisWeek: "a", planNextWeek: "b", issues: "" });
     expect(r2).toEqual({ ok: true, value: { didThisWeek: "a", planNextWeek: "b", issues: null } });
+  });
+  it("임시저장은 빈 필드를 허용하고 길이만 검사", () => {
+    expect(validateWeekly({ didThisWeek: "", planNextWeek: "" }, { draft: true })).toEqual({
+      ok: true,
+      value: { didThisWeek: "", planNextWeek: "", issues: null },
+    });
+    expect(validateWeekly({ didThisWeek: "a".repeat(2001), planNextWeek: "" }, { draft: true }).ok).toBe(false);
+  });
+});
+
+describe("parseAttachments", () => {
+  const file = { kind: "FILE", title: " 화면.png ", url: "https://x.blob.vercel-storage.com/a.png" };
+  it("빈 값은 빈 배열", () => {
+    expect(parseAttachments("")).toEqual({ ok: true, value: [] });
+  });
+  it("정상 항목은 kind·title·url만 남기고 trim", () => {
+    expect(parseAttachments(JSON.stringify([{ ...file, extra: 1 }]))).toEqual({
+      ok: true,
+      value: [{ kind: "FILE", title: "화면.png", url: file.url }],
+    });
+  });
+  it("깨진 JSON·잘못된 kind·비 http URL·10개 초과는 거부", () => {
+    expect(parseAttachments("{").ok).toBe(false);
+    expect(parseAttachments(JSON.stringify([{ ...file, kind: "X" }])).ok).toBe(false);
+    expect(parseAttachments(JSON.stringify([{ ...file, url: "javascript:alert(1)" }])).ok).toBe(false);
+    expect(parseAttachments(JSON.stringify(Array(11).fill(file))).ok).toBe(false);
+  });
+});
+
+describe("isImageUrl", () => {
+  it("png·jpg·jpeg 확장자만 이미지", () => {
+    expect(isImageUrl("https://a/b/c-x1.PNG")).toBe(true);
+    expect(isImageUrl("https://a/b.jpeg?x=1")).toBe(true);
+    expect(isImageUrl("https://a/b.pdf")).toBe(false);
+    expect(isImageUrl("https://a/png")).toBe(false);
   });
 });
 
