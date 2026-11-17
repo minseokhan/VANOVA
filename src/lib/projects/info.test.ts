@@ -114,6 +114,12 @@ describe("parseAttachments", () => {
     expect(parseAttachments(JSON.stringify([{ ...file, url: "javascript:alert(1)" }])).ok).toBe(false);
     expect(parseAttachments(JSON.stringify(Array(11).fill(file))).ok).toBe(false);
   });
+  it("FILE은 Vercel Blob https URL만 허용 (외부 이미지 삽입 방지), LINK는 아무 http(s)", () => {
+    expect(parseAttachments(JSON.stringify([{ ...file, url: "https://evil.com/a.png" }])).ok).toBe(false);
+    expect(parseAttachments(JSON.stringify([{ ...file, url: "https://evil.com/x.blob.vercel-storage.com.png" }])).ok).toBe(false);
+    expect(parseAttachments(JSON.stringify([{ ...file, url: "http://x.blob.vercel-storage.com/a.png" }])).ok).toBe(false);
+    expect(parseAttachments(JSON.stringify([{ ...file, kind: "LINK", url: "https://evil.com/a.png" }])).ok).toBe(true);
+  });
 });
 
 describe("isImageUrl", () => {

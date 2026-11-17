@@ -99,9 +99,16 @@ export function parseAttachments(raw: string): { ok: true; value: WeeklyAttachme
     if (kind !== "FILE" && kind !== "LINK") return { ok: false, error: "첨부 형식이 잘못되었습니다" };
     const r = validatePlanLink(title, url);
     if (!r.ok) return { ok: false, error: r.errors.title ?? r.errors.url ?? "첨부 형식이 잘못되었습니다" };
+    // FILE 은 썸네일로 <img> 에 그대로 들어가므로 우리 Blob 스토어 URL만 받는다
+    if (kind === "FILE" && !isBlobUrl(url)) return { ok: false, error: "업로드한 파일만 첨부할 수 있습니다" };
     value.push({ kind, title, url });
   }
   return { ok: true, value };
+}
+
+function isBlobUrl(s: string): boolean {
+  const u = new URL(s);
+  return u.protocol === "https:" && u.hostname.endsWith(".blob.vercel-storage.com");
 }
 
 export function isImageUrl(url: string): boolean {
