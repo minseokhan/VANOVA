@@ -1,9 +1,9 @@
 "use client";
 
-import { ExternalLink, Sparkles } from "lucide-react";
+import { ExternalLink, FileText, Sparkles } from "lucide-react";
 import { useActionState, useState } from "react";
-import { generateMinute } from "@/app/(dashboard)/minutes/actions";
-import { Button } from "@/components/ui/Button";
+import { generateMinute, type GenerateState } from "@/app/(dashboard)/minutes/actions";
+import { Button, buttonClass } from "@/components/ui/Button";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
@@ -18,26 +18,30 @@ const NOTES_PLACEHOLDER = `예)
 /**
  * 자유 메모 → 구글 독스 회의록 생성 → 링크 표시. 목록 등록은 문서를 확인한 뒤 "회의록 등록"으로 직접 한다.
  * 메모는 회의 날짜별로 저장되고, 달력에서 메모가 있는 날을 고르면 그때 쓴 메모가 다시 채워진다.
+ * 그 날짜에 만든 회의록이 있으면 링크를 눈에 띄게 보여주고 버튼은 "재생성"이 된다.
  */
 export function GenerateMinuteForm({
   defaultDate,
   defaultRoster,
-  savedNotes,
+  saved,
 }: {
   defaultDate: string;
   defaultRoster: string;
-  savedNotes: Record<string, string>;
+  saved: Record<string, { notes: string; url: string | null }>;
 }) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(defaultDate);
   const [roster, setRoster] = useState(defaultRoster);
-  const [notes, setNotes] = useState(savedNotes[defaultDate] ?? "");
-  const [state, formAction, pending] = useActionState(generateMinute, {});
+  const [notes, setNotes] = useState(saved[defaultDate]?.notes ?? "");
+  const [state, formAction, pending] = useActionState<GenerateState, FormData>(generateMinute, {});
   const e = state.fieldErrors ?? {};
+  // 방금 만든 결과가 지금 고른 날짜의 것이면 그것을, 아니면 저장된 링크를
+  const forDate = state.date === date;
+  const url = (forDate && state.url) || saved[date]?.url;
 
   const pickDate = (d: string) => {
     setDate(d);
-    if (d in savedNotes) setNotes(savedNotes[d]);
+    if (d in saved) setNotes(saved[d].notes);
   };
 
   if (!open) {
@@ -57,7 +61,7 @@ export function GenerateMinuteForm({
             id="gm-date"
             value={date}
             onChange={pickDate}
-            marked={new Set(Object.keys(savedNotes))}
+            marked={new Set(Object.keys(saved))}
             markedLabel="회의 내용이 저장된 날짜 (누르면 불러옴)"
           />
           <input type="hidden" name="date" value={date} />
@@ -83,18 +87,26 @@ export function GenerateMinuteForm({
         확인한 뒤 &quot;회의록 등록&quot;으로 목록에 올려 주세요. 회의 내용은 날짜별로 저장됩니다.
       </p>
       {state.error && <p className="text-xs text-red-700">{state.error}</p>}
-      {state.url && !pending && (
-        <p className="text-sm text-slate-700">
-          회의록을 만들었습니다.{" "}
-          <a href={state.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-navy-500 hover:underline">
-            <ExternalLink size={14} strokeWidth={1.75} aria-hidden />
+      {url && !pending && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-navy-500 bg-navy-50 p-4">
+          <FileText size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-navy-700" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-navy-900">{date} 회의록이 만들어져 있습니다</p>
+            <p className="text-xs text-slate-600">
+              {forDate && state.unchanged
+                ? "바뀐 내용이 없어 다시 생성하지 않았습니다. 메모·명단을 고치거나 주간 보고가 바뀌면 재생성할 수 있습니다."
+                : "드라이브 회의록 폴더에 저장되었습니다. 확인한 뒤 \"회의록 등록\"으로 목록에 올려 주세요."}
+            </p>
+          </div>
+          <a href={url} target="_blank" rel="noopener noreferrer" className={buttonClass()}>
+            <ExternalLink size={16} strokeWidth={1.75} aria-hidden />
             구글 독스에서 열기
           </a>
-        </p>
+        </div>
       )}
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "생성 중…" : "회의록 생성"}
+          {pending ? "생성 중…" : url ? "회의록 재생성" : "회의록 생성"}
         </Button>
         <Button variant="secondary" disabled={pending} onClick={() => setOpen(false)}>
           닫기
