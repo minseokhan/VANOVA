@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import { assembleMinutes, finalizeMinutes, validateGenerateInput } from "@/lib/minutes/compose";
 import { renderMinutesDocx, TEMPLATE_PATH } from "@/lib/minutes/docx";
 import { uploadAsGoogleDoc } from "@/lib/minutes/drive";
+import { minutesInputHash } from "@/lib/minutes/hash";
 import { generateMinutesContent } from "@/lib/minutes/llm";
 import { validateMinute } from "@/lib/minutes/rules";
 import { isBlobUrl, type WeeklyAttachment } from "@/lib/projects/info";
@@ -30,7 +31,10 @@ export async function createMinute(_prev: FormState, fd: FormData): Promise<Form
  * 자유 메모 + 주요 프로젝트 주간 보고 → LLM 으로 양식을 채워 드라이브에 구글 독스로 저장하고 링크를 돌려준다.
  * 메모는 회의 날짜별로 저장한다. 목록 등록은 운영진이 문서를 확인한 뒤 직접 한다.
  */
-export async function generateMinute(_prev: FormState, fd: FormData): Promise<FormState & { url?: string }> {
+/** date: 이 결과가 어느 회의 날짜의 것인지. unchanged: 입력이 지난번과 같아 AI 를 다시 부르지 않음 */
+export type GenerateState = FormState & { url?: string; date?: string; unchanged?: boolean };
+
+export async function generateMinute(_prev: GenerateState, fd: FormData): Promise<GenerateState> {
   const user = await requireAdmin();
   const input = validateGenerateInput({
     date: String(fd.get("date") ?? ""),
@@ -82,11 +86,18 @@ export async function generateMinute(_prev: FormState, fd: FormData): Promise<Fo
     })),
   };
 
+  // 메모·명단·주간 보고가 지난번 생성 때와 같으면 AI 를 다시 부르지 않고 기존 문서를 돌려준다
+  const hash = minutesInputHash(ctx);
+  const prev = await db.meetingNote.findUnique({ where: { date: day }, select: { generatedUrl: true, generatedHash: true } });
+  if (prev?.generatedUrl && prev.generatedHash === hash) return { ok: true, url: prev.generatedUrl, date, unchanged: true };
+
   try {
     const doc = finalizeMinutes(assembleMinutes(ctx, await generateMinutesContent(ctx)));
     const images = await fetchImages(doc.progress.flatMap((p) => p.images.map((i) => i.url)));
     const url = await uploadAsGoogleDoc(doc.fileName, await renderMinutesDocx(await readFile(TEMPLATE_PATH), doc, images));
-    return { ok: true, url };
+    await db.meetingNote.update({ where: { date: day }, data: { generatedUrl: url, generatedHash: hash } });
+    revalidatePath("/minutes");
+    return { ok: true, url, date };
   } catch (e) {
     console.error("[generateMinute]", e);
     return { error: e instanceof Error ? e.message : "회의록 생성에 실패했습니다" };

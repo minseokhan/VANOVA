@@ -346,10 +346,13 @@ model MeetingMinute {
 
 /// 회의록 생성 때 운영진이 적은 자유 메모. 회의 날짜당 하나, 다시 생성하면 덮어쓴다
 model MeetingNote {
-  date      DateTime @id @db.Date
-  notes     String
-  authorId  String
-  updatedAt DateTime @updatedAt
+  date          DateTime @id @db.Date
+  notes         String
+  authorId      String
+  updatedAt     DateTime @updatedAt
+  /// 마지막으로 생성한 회의록 구글 독스 링크와 그때 AI 에 보낸 입력의 해시. 같으면 재생성하지 않는다
+  generatedUrl  String?
+  generatedHash String?
 
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
