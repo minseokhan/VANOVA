@@ -57,7 +57,7 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
             <tr>
               <th className={`${th} pl-8`}>이름</th>
               <th className={th}>누적 (출석 · 인정 불참 · 불참)</th>
-              <th className={`${th} pr-8`}>이번 회의</th>
+              <th className={`${th} pr-8`}>회의 출석</th>
             </tr>
           </thead>
           <tbody>
