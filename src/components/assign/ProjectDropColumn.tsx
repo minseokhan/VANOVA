@@ -52,7 +52,7 @@ export function ProjectDropColumn({
           여기로 드래그해서 배치
         </p>
       ) : (
-        <ul className="grid h-[4.5rem] auto-rows-min grid-cols-3 gap-x-3 gap-y-1.5 overflow-y-auto pr-1">
+        <ul className="grid h-[4.5rem] auto-rows-min grid-cols-3 gap-x-3 gap-y-1.5 overflow-y-auto pt-1.5 pr-1">
           {members.map((m) => (
             <li key={m.userId} className="group flex min-w-0 items-center gap-2">
               <button
