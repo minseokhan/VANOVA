@@ -47,6 +47,13 @@ enum ExpenseKind {
   PLANNED
 }
 
+/// 주간 회의 출석 상태. EXCUSED: 사유가 인정된 불참
+enum AttendanceStatus {
+  PRESENT
+  EXCUSED
+  ABSENT
+}
+
 enum SkillLevel {
   BEGINNER
   NOVICE
@@ -98,6 +105,8 @@ model User {
   notices          Notice[]
   meetingMinutes   MeetingMinute[]
   meetingNotes     MeetingNote[]
+  attendances      Attendance[]
+  taskEntries      TaskEntry[]
 }
 
 model Project {
@@ -355,4 +364,44 @@ model MeetingNote {
   generatedHash String?
 
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+/// 주간 회의 출석. 주(월요일)당 멤버 한 명에 하나. 기록이 없으면 아직 체크 안 함
+model Attendance {
+  weekStart DateTime         @db.Date
+  userId    String
+  status    AttendanceStatus
+  /// 인정 불참 사유. 다른 상태로 바꾸면 지운다
+  reason    String?
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([weekStart, userId])
+  @@index([userId])
+}
+
+/// 운영진이 카톡 등으로 낸 기한 있는 투표·과제
+model Task {
+  id        String   @id @default(cuid())
+  title     String
+  dueDate   DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  entries TaskEntry[]
+
+  @@index([dueDate])
+}
+
+/// 과제를 만들 때의 대상 멤버 한 명. done: 기한 안에 참여함
+model TaskEntry {
+  taskId String
+  userId String
+  done   Boolean @default(false)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
 }
