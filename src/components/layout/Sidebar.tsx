@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, LayoutGrid, Lightbulb, Megaphone, MessageSquare, NotebookText, Plus, Receipt, Settings, UserCheck, Users, type LucideIcon } from "lucide-react";
+import { ClipboardCheck, FileText, LayoutGrid, Lightbulb, Megaphone, MessageSquare, NotebookText, Plus, Receipt, Settings, UserCheck, Users, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/(auth)/actions";
 import type { SessionUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils/cn";
@@ -27,6 +27,7 @@ const ADMIN: Item[] = [
   { href: "/reports", label: "주간 보고", icon: FileText },
   { href: "/assign", label: "배치 보드", icon: Users },
   { href: "/members", label: "멤버 관리", icon: UserCheck },
+  { href: "/attendance", label: "출석 · 참여", icon: ClipboardCheck },
   { href: "/projects/new", label: "새 프로젝트", icon: Plus },
 ];
 

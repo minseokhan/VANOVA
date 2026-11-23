@@ -15,7 +15,7 @@ import { LEVELS, LEVEL_HINT, LEVEL_LABEL } from "@/lib/profile/validation";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/projects/labels";
 import { formatDate } from "@/lib/utils/date";
 
-const sectionTitle = "mb-2 text-sm font-semibold text-slate-900";
+const sectionTitle = "mb-3 border-l-2 border-navy-500 pl-2 text-sm font-semibold text-slate-900";
 
 export function MemberPanel({
   userId,
@@ -93,7 +93,7 @@ export function MemberPanel({
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="absolute inset-y-0 right-0 flex w-full max-w-xl animate-[slide-in-right_200ms_ease-out] flex-col border-l border-slate-200 bg-white shadow-xl outline-none"
+        className="absolute inset-y-0 right-0 flex w-full max-w-3xl animate-[slide-in-right_200ms_ease-out] flex-col border-l border-slate-200 bg-white shadow-xl outline-none"
       >
         <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
           {detail ? (
@@ -116,7 +116,7 @@ export function MemberPanel({
         </div>
 
         {detail && (
-          <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
+          <div className="flex-1 space-y-8 overflow-y-auto px-6 py-6">
             <section>
               <h2 className={sectionTitle}>운영진 · 수준 지정</h2>
               <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -178,7 +178,10 @@ export function MemberPanel({
               )}
             </section>
 
-            <ProfileView data={detail} />
+            <section>
+              <h2 className={sectionTitle}>역량 프로필 (본인 작성)</h2>
+              <ProfileView data={detail} />
+            </section>
 
             {!isSelf && (
               <section className="border-t border-slate-200 pt-5">

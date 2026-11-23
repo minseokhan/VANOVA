@@ -1,12 +1,11 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import type { Position, ProjectStatus } from "@prisma/client";
+import type { ProjectStatus } from "@prisma/client";
 import { Crown, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
-import { Select } from "@/components/ui/Select";
-import { POSITION_LABEL, STATUS_LABEL, STATUS_TONE } from "@/lib/projects/labels";
+import { STATUS_LABEL, STATUS_TONE } from "@/lib/projects/labels";
 import { cn } from "@/lib/utils/cn";
 
 export type BoardProject = {
@@ -14,20 +13,19 @@ export type BoardProject = {
   code: string;
   title: string;
   status: ProjectStatus;
-  members: { userId: string; name: string; position: Position; isLead: boolean }[];
+  featured: boolean;
+  members: { userId: string; name: string; isLead: boolean }[];
 };
 
 export function ProjectDropColumn({
   project,
   error,
   onRemove,
-  onPosition,
   onLead,
 }: {
   project: BoardProject;
   error?: string;
   onRemove: (userId: string) => void;
-  onPosition: (userId: string, position: Position) => void;
   onLead: (userId: string, isLead: boolean) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: project.id });
@@ -47,12 +45,16 @@ export function ProjectDropColumn({
         </div>
         <Badge tone={STATUS_TONE[project.status]}>{STATUS_LABEL[project.status]}</Badge>
       </div>
+      <p className="mb-1.5 text-xs text-slate-500 tabular-nums">멤버 {members.length}명</p>
+      {/* 인원이 늘어도 카드 높이는 같게 — 한 줄에 3명씩, 목록 칸은 2줄 높이로 고정하고 넘치면 안에서 스크롤 */}
       {members.length === 0 ? (
-        <p className="py-1 text-xs text-slate-400">여기로 드래그해서 배치</p>
+        <p className="flex h-[4.5rem] items-center justify-center rounded-md border border-dashed border-slate-200 text-xs text-slate-400">
+          여기로 드래그해서 배치
+        </p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="grid h-[4.5rem] auto-rows-min grid-cols-3 gap-x-3 gap-y-1.5 overflow-y-auto pt-1.5 pr-1 pl-1">
           {members.map((m) => (
-            <li key={m.userId} className="group flex items-center gap-2">
+            <li key={m.userId} className="group flex min-w-0 items-center gap-2">
               <button
                 type="button"
                 aria-label={`${m.name} 팀장`}
@@ -76,21 +78,10 @@ export function ProjectDropColumn({
                   )}
                 />
               </button>
-              <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{m.name}</span>
-              {m.isLead && <Badge tone="navy">팀장</Badge>}
-              <Select
-                aria-label={`${m.name} 포지션`}
-                variant="underline"
-                value={m.position}
-                className="w-24"
-                onChange={(e) => onPosition(m.userId, e.target.value as Position)}
-              >
-                {Object.entries(POSITION_LABEL).map(([v, label]) => (
-                  <option key={v} value={v}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
+              <span className={cn("min-w-0 flex-1 truncate text-sm", m.isLead ? "font-semibold text-navy-900" : "text-slate-700")}>
+                {m.name}
+                {m.isLead && <span className="sr-only"> (팀장)</span>}
+              </span>
               <button
                 type="button"
                 aria-label={`${m.name} 배치 해제`}
