@@ -20,16 +20,16 @@ export function MembersTable({ members, meId, adminCount }: { members: Member[];
             <col className="w-[11%]" />
             <col className="w-[11%]" />
             <col />
-            <col className="w-32" />
+            <col className="w-36" />
           </colgroup>
           <thead className="bg-navy-50">
             <tr>
-              <th className={`${th} pl-5`}>이름</th>
+              <th className={`${th} pl-8`}>이름</th>
               <th className={th}>아이디</th>
               <th className={th}>역할</th>
               <th className={th}>수준</th>
               <th className={th}>참여 프로젝트</th>
-              <th className={`${th} pr-5`}>
+              <th className={`${th} pr-8`}>
                 <span className="sr-only">상세</span>
               </th>
             </tr>

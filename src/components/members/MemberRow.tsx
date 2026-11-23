@@ -71,7 +71,7 @@ export function MemberRow({ user, isSelf, onOpen }: { user: Member; isSelf: bool
   const isAdmin = user.role === "ADMIN";
   return (
     <tr className="border-b border-slate-100">
-      <td className="py-2 pr-3 pl-5">
+      <td className="py-2 pr-3 pl-8">
         <span className="flex min-w-0 items-center gap-3 text-sm text-slate-900">
           <Avatar name={user.name} />
           <span className="truncate">{user.name}</span>
@@ -95,7 +95,7 @@ export function MemberRow({ user, isSelf, onOpen }: { user: Member; isSelf: bool
         <span className="tabular-nums">{user.projectCodes.length}</span>
         {user.projectCodes.length > 0 && <span className="ml-1 text-xs text-slate-500">({user.projectCodes.join(", ")})</span>}
       </td>
-      <td className="py-2 pr-5 pl-3 text-right">
+      <td className="py-2 pr-8 pl-3">
         <Button variant="secondary" size="sm" onClick={onOpen}>
           상세 보기
         </Button>

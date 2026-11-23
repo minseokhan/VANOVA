@@ -49,15 +49,15 @@ export function ProjectDropColumn({
         <Badge tone={STATUS_TONE[project.status]}>{STATUS_LABEL[project.status]}</Badge>
       </div>
       <p className="mb-1.5 text-xs text-slate-500 tabular-nums">멤버 {members.length}명</p>
-      {/* 인원이 늘어도 카드 높이는 같게 — 목록 칸 높이를 고정하고 넘치면 안에서 스크롤 */}
+      {/* 인원이 늘어도 카드 높이는 같게 — 한 줄에 2명씩, 목록 칸은 2줄 높이로 고정하고 넘치면 안에서 스크롤 */}
       {members.length === 0 ? (
-        <p className="flex h-28 items-center justify-center rounded-md border border-dashed border-slate-200 text-xs text-slate-400">
+        <p className="flex h-[4.5rem] items-center justify-center rounded-md border border-dashed border-slate-200 text-xs text-slate-400">
           여기로 드래그해서 배치
         </p>
       ) : (
-        <ul className="h-28 space-y-1.5 overflow-y-auto pr-1">
+        <ul className="grid h-[4.5rem] auto-rows-min grid-cols-2 gap-x-4 gap-y-1.5 overflow-y-auto pr-1">
           {members.map((m) => (
-            <li key={m.userId} className="group flex items-center gap-2">
+            <li key={m.userId} className="group flex min-w-0 items-center gap-2">
               <button
                 type="button"
                 aria-label={`${m.name} 팀장`}
@@ -89,7 +89,7 @@ export function ProjectDropColumn({
                 aria-label={`${m.name} 포지션`}
                 variant="underline"
                 value={m.position}
-                className="w-24"
+                className="w-20 shrink-0"
                 onChange={(e) => onPosition(m.userId, e.target.value as Position)}
               >
                 {Object.entries(POSITION_LABEL).map(([v, label]) => (

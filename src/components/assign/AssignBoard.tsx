@@ -105,7 +105,7 @@ export function AssignBoard({ members, projects }: { members: BoardMember[]; pro
             const list = optimistic.filter(match);
             if (list.length === 0) return null;
             const grid = (
-              <div className="grid content-start items-start gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid content-start items-start gap-4 lg:grid-cols-2">
                 {list.map((p) => (
                   <ProjectDropColumn
                     key={p.id}
