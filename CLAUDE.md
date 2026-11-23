@@ -30,6 +30,12 @@ VAN 학회 AI 혁신부 운영진·부원이 프로젝트 배치, 진행 상황,
 - CRITICAL: 스키마를 바꿨으면 **dev 서버를 재시작해야 한다.** `prisma generate`는 `node_modules`의 클라이언트만 새로 쓰고, 실행 중인 서버는 시작할 때 require한 옛 모듈을 들고 있다. `src/lib/db.ts`가 인스턴스를 `globalThis`에 캐시하므로 HMR로도 교체되지 않는다. 증상은 코드 오타처럼 보이는 `Cannot read properties of undefined (reading 'findUnique')`다. 절차: `prisma migrate dev` → `prisma generate` → **dev 서버 재시작** → 실제 페이지 200 확인. `.claude/hooks/prisma-stale-guard.sh`(Stop 훅)가 턴 종료 시 생성 클라이언트 mtime과 서버 시작 시각을 비교해 낡았으면 자동 재시작한다.
 - CRITICAL: 여러 세션이 같은 `node_modules`를 공유하면 Prisma 클라이언트는 **마지막으로 generate한 브랜치의 스키마**만 반영한다. 다른 worktree에서 `tsc`가 내 브랜치 모델을 모른다고 하면 내 코드 문제가 아니다. 이때 내 스키마로 재생성하면 반대쪽 세션이 깨지므로, 재생성 대신 lint로 확인하고 오류가 전부 Prisma 접근부인지만 확인한 뒤 넘어간다.
 
+- CRITICAL: **DB를 비울 수 있는 명령은 대상 주소를 눈으로 확인하고 사용자 승인을 받은 뒤에만 실행한다.** 2026-11-23 `prisma migrate diff --shadow-database-url`에 sed로 만든 주소를 넘겼는데, macOS sed가 치환을 하지 않아 섀도 주소가 실제 로컬 DB와 같아졌고 로컬 데이터가 전부 지워졌다.
+  - 섀도·임시 DB 주소는 정규식으로 만들지 말고 리터럴로 쓴다. 실행 전에 `DATABASE_URL`과 다른지 출력해 확인한다.
+  - 마이그레이션 SQL 생성은 섀도 DB가 필요 없는 `migrate diff --from-schema-datamodel <이전 스키마> --to-schema-datamodel prisma/schema.prisma --script`를 쓴다.
+  - 가드 훅(`block-dangerous.sh`·`db-guard.sh`)이나 Prisma의 AI 안전장치가 막으면 **우회 경로를 찾지 말고 멈춰서 사용자에게 묻는다.**
+  - 아직 머지 전인 내 마이그레이션을 고칠 때도 로컬 DB에서 테이블을 지우지 말고, 후속 마이그레이션을 추가하는 방식으로 고친다.
+
 ## 하네스 실행 규칙
 - 각 step은 `phases/<phase>/step<N>.md`에 명시된 작업만 수행하고, 요청되지 않은 기능/파일을 만들지 않는다.
 - AC를 직접 실행해 검증한 뒤 `phases/<phase>/index.json`의 step status를 갱신한다.
