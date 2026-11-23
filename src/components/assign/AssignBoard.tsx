@@ -10,9 +10,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import type { Position } from "@prisma/client";
 import { useOptimistic, useState, useTransition } from "react";
-import { assignMember, setLead, setPosition, unassignMember } from "@/app/(dashboard)/assign/actions";
+import { assignMember, setLead, unassignMember } from "@/app/(dashboard)/assign/actions";
 import { Input } from "@/components/ui/Input";
 import { MemberCard, MemberCardView, type BoardMember } from "./MemberCard";
 import { ProjectDropColumn, type BoardProject } from "./ProjectDropColumn";
@@ -20,7 +19,6 @@ import { ProjectDropColumn, type BoardProject } from "./ProjectDropColumn";
 type Patch =
   | { type: "add"; projectId: string; member: BoardMember }
   | { type: "remove"; projectId: string; userId: string }
-  | { type: "position"; projectId: string; userId: string; position: Position }
   | { type: "lead"; projectId: string; userId: string; isLead: boolean };
 
 function apply(projects: BoardProject[], patch: Patch): BoardProject[] {
@@ -31,12 +29,10 @@ function apply(projects: BoardProject[], patch: Patch): BoardProject[] {
         if (p.members.some((m) => m.userId === patch.member.id)) return p;
         return {
           ...p,
-          members: [...p.members, { userId: patch.member.id, name: patch.member.name, position: "ETC", isLead: false }],
+          members: [...p.members, { userId: patch.member.id, name: patch.member.name, isLead: false }],
         };
       case "remove":
         return { ...p, members: p.members.filter((m) => m.userId !== patch.userId) };
-      case "position":
-        return { ...p, members: p.members.map((m) => (m.userId === patch.userId ? { ...m, position: patch.position } : m)) };
       // 지정은 나머지를 전부 내리고, 해제는 대상만 내린다 (서버의 setLead 와 같은 규칙)
       case "lead":
         return {
@@ -48,6 +44,14 @@ function apply(projects: BoardProject[], patch: Patch): BoardProject[] {
     }
   });
 }
+
+/** 주요 프로젝트는 상태와 상관없이 맨 위, 나머지는 상태별. 완료는 접어 둔다 */
+const GROUPS: { title: string; match: (p: BoardProject) => boolean; collapsed?: boolean }[] = [
+  { title: "주요 프로젝트", match: (p) => p.featured },
+  { title: "진행중", match: (p) => !p.featured && p.status === "IN_PROGRESS" },
+  { title: "완료", match: (p) => !p.featured && p.status === "DONE", collapsed: true },
+  { title: "미배정", match: (p) => !p.featured && p.status === "UNASSIGNED" },
+];
 
 export function AssignBoard({ members, projects }: { members: BoardMember[]; projects: BoardProject[] }) {
   const [optimistic, patch] = useOptimistic(projects, apply);
@@ -92,19 +96,44 @@ export function AssignBoard({ members, projects }: { members: BoardMember[]; pro
             ))}
           </div>
         </aside>
-        <div className="grid min-w-0 flex-1 content-start items-start gap-4 xl:grid-cols-2 2xl:grid-cols-3">
-          {optimistic.map((p) => (
-            <ProjectDropColumn
-              key={p.id}
-              project={p}
-              error={errors[p.id] || undefined}
-              onRemove={(userId) => run({ type: "remove", projectId: p.id, userId }, () => unassignMember(p.id, userId))}
-              onPosition={(userId, position) =>
-                run({ type: "position", projectId: p.id, userId, position }, () => setPosition(p.id, userId, position))
-              }
-              onLead={(userId, isLead) => run({ type: "lead", projectId: p.id, userId, isLead }, () => setLead(p.id, userId, isLead))}
-            />
-          ))}
+        <div className="min-w-0 flex-1 space-y-8">
+          {GROUPS.map(({ title, match, collapsed }) => {
+            const list = optimistic.filter(match);
+            if (list.length === 0) return null;
+            const grid = (
+              <div className="grid content-start items-start gap-4 lg:grid-cols-2">
+                {list.map((p) => (
+                  <ProjectDropColumn
+                    key={p.id}
+                    project={p}
+                    error={errors[p.id] || undefined}
+                    onRemove={(userId) => run({ type: "remove", projectId: p.id, userId }, () => unassignMember(p.id, userId))}
+                    onLead={(userId, isLead) => run({ type: "lead", projectId: p.id, userId, isLead }, () => setLead(p.id, userId, isLead))}
+                  />
+                ))}
+              </div>
+            );
+            const heading = (
+              <>
+                {title} <span className="font-normal text-slate-500 tabular-nums">({list.length})</span>
+              </>
+            );
+            return (
+              <section key={title}>
+                {collapsed ? (
+                  <details>
+                    <summary className="mb-3 cursor-pointer text-sm font-semibold text-slate-900">{heading}</summary>
+                    {grid}
+                  </details>
+                ) : (
+                  <>
+                    <h2 className="mb-3 border-l-2 border-navy-500 pl-2 text-sm font-semibold text-slate-900">{heading}</h2>
+                    {grid}
+                  </>
+                )}
+              </section>
+            );
+          })}
         </div>
       </div>
       <DragOverlay dropAnimation={{ duration: 200 }}>{active && <MemberCardView member={active} />}</DragOverlay>
