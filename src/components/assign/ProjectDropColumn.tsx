@@ -81,7 +81,7 @@ export function ProjectDropColumn({
                   )}
                 />
               </button>
-              <span className={cn("min-w-0 flex-1 truncate text-sm", m.isLead ? "font-semibold text-navy-900" : "text-slate-700")}>
+              <span className={cn("max-w-20 shrink-0 truncate text-sm", m.isLead ? "font-semibold text-navy-900" : "text-slate-700")}>
                 {m.name}
                 {m.isLead && <span className="sr-only"> (팀장)</span>}
               </span>
@@ -89,7 +89,7 @@ export function ProjectDropColumn({
                 aria-label={`${m.name} 포지션`}
                 variant="underline"
                 value={m.position}
-                className="w-20 shrink-0"
+                className="min-w-0 flex-1"
                 onChange={(e) => onPosition(m.userId, e.target.value as Position)}
               >
                 {Object.entries(POSITION_LABEL).map(([v, label]) => (
