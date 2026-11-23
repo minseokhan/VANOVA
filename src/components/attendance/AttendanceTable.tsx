@@ -24,7 +24,7 @@ const SELECTED: Record<AttendanceStatus, string> = {
   ABSENT: "bg-red-100 text-red-700",
 };
 
-const th = "px-3 py-2 text-left text-xs font-medium text-slate-600";
+const th = "px-5 py-2 text-left text-xs font-medium text-slate-600";
 
 /** 멤버마다 출석 / 인정 불참 / 불참 중 하나를 고르면 바로 저장된다. 인정 불참이면 오른쪽에 사유 칸이 뜬다 */
 export function AttendanceTable({ week, rows }: { week: string; rows: AttendanceRow[] }) {
@@ -58,11 +58,11 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
         {count(null) > 0 && <span className="text-slate-400"> · 미체크 {count(null)}</span>}
       </p>
       <div className="overflow-x-auto rounded-md border border-slate-200">
-        <table className="w-full min-w-[760px] table-fixed">
+        <table className="w-full min-w-[880px] table-fixed">
           <colgroup>
-            <col className="w-48" />
-            <col className="w-44" />
-            <col className="w-64" />
+            <col className="w-52" />
+            <col className="w-52" />
+            <col className="w-72" />
             <col />
           </colgroup>
           <thead className="bg-navy-50">
@@ -75,18 +75,18 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
           </thead>
           <tbody>
             {list.map((r) => (
-              <tr key={r.userId} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 pr-3 pl-8">
+              <tr key={r.userId} className="h-12 border-b border-slate-100 last:border-0">
+                <td className="pr-5 pl-8">
                   <span className="flex min-w-0 items-center gap-3 text-sm text-slate-900">
                     <Avatar name={r.name} />
                     <span className="truncate">{r.name}</span>
                   </span>
                 </td>
-                <td className="px-3 py-2 text-sm text-slate-700 tabular-nums">
+                <td className="px-5 text-sm text-slate-700 tabular-nums">
                   {r.totals.PRESENT} · {r.totals.EXCUSED} ·{" "}
                   <span className={r.totals.ABSENT > 0 ? "font-medium text-red-700" : undefined}>{r.totals.ABSENT}</span>
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-5">
                   <div role="radiogroup" aria-label={`${r.name} 출석`} className="inline-flex rounded-md border border-slate-300 p-0.5">
                     {ATTENDANCE_STATUSES.map((s) => (
                       <button
@@ -105,7 +105,7 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
                     ))}
                   </div>
                 </td>
-                <td className="py-2 pr-8 pl-3">
+                <td className="pr-8 pl-5">
                   {r.status === "EXCUSED" && (
                     <Input
                       key={`${week}-${r.userId}`}
@@ -113,7 +113,7 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
                       defaultValue={r.reason ?? ""}
                       maxLength={MAX_REASON}
                       placeholder="사유 입력 후 Enter (예: 학교 시험)"
-                      className="max-w-72 py-1.5 text-sm"
+                      className="h-8 max-w-72 py-0 text-sm"
                       onBlur={(e) => saveReason(r, e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                     />

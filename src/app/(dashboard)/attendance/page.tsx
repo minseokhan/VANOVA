@@ -43,11 +43,13 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const ids = members.map((m) => m.id);
   const totals = countAttendance(ids, allAttendance);
   const thisWeek = new Map(allAttendance.filter((a) => a.weekStart.getTime() === week.getTime()).map((a) => [a.userId, a]));
+  // 대상은 부원만 — 과제를 만든 뒤 운영진이 된 사람은 빼고 보여 준다
+  const memberIds = new Set(ids);
   const tasks = taskRows.map((t) => ({
     id: t.id,
     title: t.title,
     dueDate: formatDate(t.dueDate),
-    entries: t.entries.map((e) => ({ userId: e.userId, name: e.user.name, done: e.done })),
+    entries: t.entries.filter((e) => memberIds.has(e.userId)).map((e) => ({ userId: e.userId, name: e.user.name, done: e.done })),
   }));
   const missed = missedTasks(ids, tasks, today);
   const missedMembers = members.filter((m) => missed[m.id].length > 0);
