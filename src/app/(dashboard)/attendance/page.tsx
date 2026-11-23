@@ -30,7 +30,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const [members, allAttendance, taskRows] = await Promise.all([
     db.user.findMany({ where: { role: "MEMBER", approved: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     // ponytail: 누적 집계를 위해 출석 기록 전체를 읽는다. 학기 단위로 수천 건이 넘으면 groupBy 로 바꿀 것
-    db.attendance.findMany({ select: { weekStart: true, userId: true, status: true } }),
+    db.attendance.findMany({ select: { weekStart: true, userId: true, status: true, reason: true } }),
     db.task.findMany({
       orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
       select: {
@@ -42,7 +42,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
 
   const ids = members.map((m) => m.id);
   const totals = countAttendance(ids, allAttendance);
-  const thisWeekStatus = new Map(allAttendance.filter((a) => a.weekStart.getTime() === week.getTime()).map((a) => [a.userId, a.status]));
+  const thisWeek = new Map(allAttendance.filter((a) => a.weekStart.getTime() === week.getTime()).map((a) => [a.userId, a]));
   const tasks = taskRows.map((t) => ({
     id: t.id,
     title: t.title,
@@ -68,7 +68,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
           <AttendanceTable
             key={ymd(week)}
             week={ymd(week)}
-            rows={members.map((m) => ({ userId: m.id, name: m.name, status: thisWeekStatus.get(m.id) ?? null, totals: totals[m.id] }))}
+            rows={members.map((m) => ({ userId: m.id, name: m.name, status: thisWeek.get(m.id)?.status ?? null, reason: thisWeek.get(m.id)?.reason ?? null, totals: totals[m.id] }))}
           />
         )}
       </section>

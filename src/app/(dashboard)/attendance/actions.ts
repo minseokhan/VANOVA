@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/guards";
-import { isAttendanceStatus, validateTask } from "@/lib/attendance/rules";
+import { isAttendanceStatus, normalizeReason, validateTask } from "@/lib/attendance/rules";
 import { parseDay } from "@/lib/minutes/rules";
 import { getWeekStart } from "@/lib/utils/week";
 import type { FormState } from "@/app/(dashboard)/projects/[id]/actions";
@@ -17,8 +17,25 @@ export async function setAttendance(week: string, userId: string, status: string
   await db.attendance.upsert({
     where: { weekStart_userId: { weekStart, userId } },
     create: { weekStart, userId, status },
-    update: { status },
+    // 사유는 인정 불참일 때만 남긴다
+    update: status === "EXCUSED" ? { status } : { status, reason: null },
   });
+  revalidatePath("/attendance");
+  return {};
+}
+
+/** 인정 불참 사유 저장. 인정 불참으로 체크된 기록에만 쓴다 */
+export async function setAttendanceReason(week: string, userId: string, raw: string): Promise<{ error?: string }> {
+  await requireAdmin();
+  const day = parseDay(week);
+  const reason = normalizeReason(raw);
+  if (!day) return { error: "잘못된 요청입니다" };
+  if (!reason.ok) return { error: reason.error };
+  const { count } = await db.attendance.updateMany({
+    where: { weekStart: getWeekStart(day), userId, status: "EXCUSED" },
+    data: { reason: reason.value },
+  });
+  if (count === 0) return { error: "인정 불참으로 체크된 뒤에 사유를 적을 수 있습니다" };
   revalidatePath("/attendance");
   return {};
 }

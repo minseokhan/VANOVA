@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_TASK_TITLE, countAttendance, isMissed, isAttendanceStatus, missedTasks, validateTask } from "./rules";
+import { MAX_REASON, MAX_TASK_TITLE, countAttendance, normalizeReason, isMissed, isAttendanceStatus, missedTasks, validateTask } from "./rules";
 
 describe("validateTask", () => {
   it("제목·마감일이 맞으면 통과하고 마감일을 UTC 자정 Date로 바꾼다", () => {
@@ -62,5 +62,16 @@ describe("missedTasks", () => {
       b: [],
       c: [],
     });
+  });
+});
+
+describe("normalizeReason", () => {
+  it("앞뒤 공백을 지우고, 비면 null", () => {
+    expect(normalizeReason("  학교 팀플 회의  ")).toEqual({ ok: true, value: "학교 팀플 회의" });
+    expect(normalizeReason("   ")).toEqual({ ok: true, value: null });
+  });
+
+  it("너무 길면 에러", () => {
+    expect(normalizeReason("가".repeat(MAX_REASON + 1))).toEqual({ ok: false, error: `사유는 ${MAX_REASON}자 이하로 입력하세요` });
   });
 });

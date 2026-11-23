@@ -8,6 +8,15 @@ export function isAttendanceStatus(v: string): v is AttendanceStatus {
   return (ATTENDANCE_STATUSES as readonly string[]).includes(v);
 }
 
+export const MAX_REASON = 200;
+
+/** 인정 불참 사유. 비우면 null */
+export function normalizeReason(raw: string): { ok: true; value: string | null } | { ok: false; error: string } {
+  const v = raw.trim();
+  if (v.length > MAX_REASON) return { ok: false, error: `사유는 ${MAX_REASON}자 이하로 입력하세요` };
+  return { ok: true, value: v || null };
+}
+
 /** 멤버별 출석·인정 불참·불참 수 */
 export function countAttendance(
   userIds: string[],

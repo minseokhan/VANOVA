@@ -1,9 +1,10 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { setAttendance } from "@/app/(dashboard)/attendance/actions";
+import { setAttendance, setAttendanceReason } from "@/app/(dashboard)/attendance/actions";
 import { Avatar } from "@/components/ui/Avatar";
-import { ATTENDANCE_LABEL, ATTENDANCE_STATUSES, type AttendanceStatus } from "@/lib/attendance/rules";
+import { Input } from "@/components/ui/Input";
+import { ATTENDANCE_LABEL, ATTENDANCE_STATUSES, MAX_REASON, type AttendanceStatus } from "@/lib/attendance/rules";
 import { cn } from "@/lib/utils/cn";
 
 export type AttendanceRow = {
@@ -11,6 +12,8 @@ export type AttendanceRow = {
   name: string;
   /** 이 주 상태. null 이면 아직 체크 안 함 */
   status: AttendanceStatus | null;
+  /** 인정 불참 사유 */
+  reason: string | null;
   /** 지금까지 누적 */
   totals: Record<AttendanceStatus, number>;
 };
@@ -23,7 +26,7 @@ const SELECTED: Record<AttendanceStatus, string> = {
 
 const th = "px-3 py-2 text-left text-xs font-medium text-slate-600";
 
-/** 멤버마다 출석 / 인정 불참 / 불참 중 하나를 고르면 바로 저장된다 */
+/** 멤버마다 출석 / 인정 불참 / 불참 중 하나를 고르면 바로 저장된다. 인정 불참이면 오른쪽에 사유 칸이 뜬다 */
 export function AttendanceTable({ week, rows }: { week: string; rows: AttendanceRow[] }) {
   const [list, apply] = useOptimistic(rows, (cur, p: { userId: string; status: AttendanceStatus }) =>
     cur.map((r) => (r.userId === p.userId ? { ...r, status: p.status } : r)),
@@ -38,6 +41,14 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
       setError(r.error ?? null);
     });
 
+  const saveReason = (row: AttendanceRow, value: string) => {
+    if (value.trim() === (row.reason ?? "")) return;
+    startTransition(async () => {
+      const r = await setAttendanceReason(week, row.userId, value);
+      setError(r.error ?? null);
+    });
+  };
+
   const count = (s: AttendanceStatus | null) => list.filter((r) => r.status === s).length;
 
   return (
@@ -47,17 +58,19 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
         {count(null) > 0 && <span className="text-slate-400"> · 미체크 {count(null)}</span>}
       </p>
       <div className="overflow-x-auto rounded-md border border-slate-200">
-        <table className="w-full min-w-[640px] table-fixed">
+        <table className="w-full min-w-[760px] table-fixed">
           <colgroup>
-            <col className="w-[30%]" />
+            <col className="w-48" />
+            <col className="w-64" />
             <col />
-            <col className="w-72" />
+            <col className="w-44" />
           </colgroup>
           <thead className="bg-navy-50">
             <tr>
               <th className={`${th} pl-8`}>이름</th>
-              <th className={th}>누적 (출석 · 인정 불참 · 불참)</th>
-              <th className={`${th} pr-8`}>회의 출석</th>
+              <th className={th}>회의 출석</th>
+              <th className={th}>인정 불참 사유</th>
+              <th className={`${th} pr-8`}>누적 (출석 · 인정 · 불참)</th>
             </tr>
           </thead>
           <tbody>
@@ -69,11 +82,7 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
                     <span className="truncate">{r.name}</span>
                   </span>
                 </td>
-                <td className="px-3 py-2 text-sm text-slate-700 tabular-nums">
-                  {r.totals.PRESENT} · {r.totals.EXCUSED} ·{" "}
-                  <span className={r.totals.ABSENT > 0 ? "font-medium text-red-700" : undefined}>{r.totals.ABSENT}</span>
-                </td>
-                <td className="py-2 pr-8 pl-3">
+                <td className="px-3 py-2">
                   <div role="radiogroup" aria-label={`${r.name} 출석`} className="inline-flex rounded-md border border-slate-300 p-0.5">
                     {ATTENDANCE_STATUSES.map((s) => (
                       <button
@@ -91,6 +100,24 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
                       </button>
                     ))}
                   </div>
+                </td>
+                <td className="px-3 py-2">
+                  {r.status === "EXCUSED" && (
+                    <Input
+                      key={`${week}-${r.userId}`}
+                      aria-label={`${r.name} 인정 불참 사유`}
+                      defaultValue={r.reason ?? ""}
+                      maxLength={MAX_REASON}
+                      placeholder="사유 입력 후 Enter (예: 학교 시험)"
+                      className="py-1.5 text-sm"
+                      onBlur={(e) => saveReason(r, e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                    />
+                  )}
+                </td>
+                <td className="py-2 pr-8 pl-3 text-sm text-slate-700 tabular-nums">
+                  {r.totals.PRESENT} · {r.totals.EXCUSED} ·{" "}
+                  <span className={r.totals.ABSENT > 0 ? "font-medium text-red-700" : undefined}>{r.totals.ABSENT}</span>
                 </td>
               </tr>
             ))}
