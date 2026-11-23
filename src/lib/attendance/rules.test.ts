@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_REASON, MAX_TASK_TITLE, countAttendance, normalizeReason, isMissed, isAttendanceStatus, missedTasks, validateTask } from "./rules";
+import { MAX_REASON, MAX_TASK_TITLE, countAttendance, normalizeReason, isAttendanceStatus, validateTask } from "./rules";
 
 describe("validateTask", () => {
   it("제목·마감일이 맞으면 통과하고 마감일을 UTC 자정 Date로 바꾼다", () => {
@@ -39,28 +39,6 @@ describe("countAttendance", () => {
       a: { PRESENT: 2, EXCUSED: 1, ABSENT: 0 },
       b: { PRESENT: 0, EXCUSED: 0, ABSENT: 1 },
       c: { PRESENT: 0, EXCUSED: 0, ABSENT: 0 },
-    });
-  });
-});
-
-describe("isMissed", () => {
-  it("마감일이 지나야 미참여 (마감 당일은 아직 아님)", () => {
-    expect(isMissed("2026-11-23", false, "2026-11-23")).toBe(false);
-    expect(isMissed("2026-11-22", false, "2026-11-23")).toBe(true);
-    expect(isMissed("2026-11-22", true, "2026-11-23")).toBe(false);
-  });
-});
-
-describe("missedTasks", () => {
-  it("대상인 과제 중 마감이 지났는데 체크 안 된 것만 모은다", () => {
-    const tasks = [
-      { id: "t1", title: "MT 투표", dueDate: "2026-11-20", entries: [{ userId: "a", done: false }, { userId: "b", done: true }] },
-      { id: "t2", title: "회고 작성", dueDate: "2026-11-30", entries: [{ userId: "a", done: false }] },
-    ];
-    expect(missedTasks(["a", "b", "c"], tasks, "2026-11-23")).toEqual({
-      a: [{ id: "t1", title: "MT 투표", dueDate: "2026-11-20" }],
-      b: [],
-      c: [],
     });
   });
 });

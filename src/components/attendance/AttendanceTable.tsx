@@ -113,7 +113,7 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
                       defaultValue={r.reason ?? ""}
                       maxLength={MAX_REASON}
                       placeholder="사유 입력 후 Enter (예: 학교 시험)"
-                      className="h-8 max-w-72 py-0 text-sm"
+                      className="h-8 max-w-md py-0 text-sm"
                       onBlur={(e) => saveReason(r, e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                     />

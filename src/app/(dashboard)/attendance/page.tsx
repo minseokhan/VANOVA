@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/guards";
-import { countAttendance, missedTasks } from "@/lib/attendance/rules";
+import { countAttendance } from "@/lib/attendance/rules";
 import { parseWeekParam } from "@/lib/reports/weekly";
 import { formatDate } from "@/lib/utils/date";
 import { formatWeekLabel, getWeekStart } from "@/lib/utils/week";
 import { AttendanceTable } from "@/components/attendance/AttendanceTable";
 import { TaskCard } from "@/components/attendance/TaskCard";
 import { TaskForm } from "@/components/attendance/TaskForm";
-import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WeekNav } from "@/components/ui/WeekNav";
@@ -51,8 +50,6 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
     dueDate: formatDate(t.dueDate),
     entries: t.entries.filter((e) => memberIds.has(e.userId)).map((e) => ({ userId: e.userId, name: e.user.name, done: e.done })),
   }));
-  const missed = missedTasks(ids, tasks, today);
-  const missedMembers = members.filter((m) => missed[m.id].length > 0);
 
   return (
     <div className="space-y-10">
@@ -80,23 +77,6 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
           <h2 className={sectionTitle}>투표 · 과제 참여</h2>
           <TaskForm today={today} />
         </div>
-        {missedMembers.length > 0 && (
-          <div className="rounded-md border border-red-200 bg-red-50/50 p-4">
-            <p className="mb-2 text-xs font-semibold text-red-700">마감이 지났는데 참여하지 않은 사람</p>
-            <ul className="space-y-1.5">
-              {missedMembers.map((m) => (
-                <li key={m.id} className="flex flex-wrap items-center gap-1.5 text-sm">
-                  <span className="mr-1 w-16 shrink-0 font-medium text-slate-900">{m.name}</span>
-                  {missed[m.id].map((t) => (
-                    <Badge key={t.id} tone="red" title={`마감 ${t.dueDate}`}>
-                      {t.title}
-                    </Badge>
-                  ))}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
         {tasks.length === 0 ? (
           <EmptyState message="아직 투표 · 과제가 없습니다. 카톡에 투표나 기한 있는 요청을 올렸을 때 추가하세요" />
         ) : (

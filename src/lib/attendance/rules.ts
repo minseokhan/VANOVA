@@ -43,23 +43,3 @@ export function validateTask(input: { title: string; dueDate: string }): TaskRes
   if (Object.keys(errors).length) return { ok: false, errors };
   return { ok: true, value: { title, dueDate: dueDate! } };
 }
-
-/** 마감일(dueDate)이 지났는데 체크되지 않았으면 미참여. 날짜는 "YYYY-MM-DD" (KST) */
-export function isMissed(dueDate: string, done: boolean, today: string): boolean {
-  return !done && dueDate < today;
-}
-
-export type TaskSummary = { id: string; title: string; dueDate: string };
-
-/** 멤버별 미참여 투표·과제. 과제를 만들 때 대상(entries)에 없던 멤버는 세지 않는다 */
-export function missedTasks(
-  userIds: string[],
-  tasks: (TaskSummary & { entries: { userId: string; done: boolean }[] })[],
-  today: string,
-): Record<string, TaskSummary[]> {
-  const out: Record<string, TaskSummary[]> = Object.fromEntries(userIds.map((id) => [id, []]));
-  for (const { entries, ...t } of tasks) {
-    for (const { userId, done } of entries) if (out[userId] && isMissed(t.dueDate, done, today)) out[userId].push(t);
-  }
-  return out;
-}
