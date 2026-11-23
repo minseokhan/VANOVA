@@ -1,54 +1,56 @@
 import { parseDay } from "@/lib/minutes/rules";
 
-export const MAX_CHECK_TITLE = 100;
-/** MEETING: 회의 출석, TASK: 기한 있는 투표·과제 (date 가 마감일) */
-export const CHECK_KINDS = ["MEETING", "TASK"] as const;
-export type CheckKind = (typeof CHECK_KINDS)[number];
-export const CHECK_KIND_LABEL: Record<CheckKind, string> = { MEETING: "회의 출석", TASK: "투표 · 과제" };
+export const ATTENDANCE_STATUSES = ["PRESENT", "EXCUSED", "ABSENT"] as const;
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
+export const ATTENDANCE_LABEL: Record<AttendanceStatus, string> = { PRESENT: "출석", EXCUSED: "인정 불참", ABSENT: "불참" };
 
-type Field = "kind" | "title" | "date";
-export type CheckEventResult =
-  | { ok: true; value: { kind: CheckKind; title: string; date: Date } }
-  | { ok: false; errors: Partial<Record<Field, string>> };
+export function isAttendanceStatus(v: string): v is AttendanceStatus {
+  return (ATTENDANCE_STATUSES as readonly string[]).includes(v);
+}
 
-export function validateCheckEvent(input: { kind: string; title: string; date: string }): CheckEventResult {
-  const errors: Partial<Record<Field, string>> = {};
-  const kind = CHECK_KINDS.find((k) => k === input.kind);
-  if (!kind) errors.kind = "종류를 선택하세요";
+/** 멤버별 출석·인정 불참·불참 수 */
+export function countAttendance(
+  userIds: string[],
+  rows: { userId: string; status: AttendanceStatus }[],
+): Record<string, Record<AttendanceStatus, number>> {
+  const out = Object.fromEntries(userIds.map((id) => [id, { PRESENT: 0, EXCUSED: 0, ABSENT: 0 }]));
+  for (const r of rows) if (out[r.userId]) out[r.userId][r.status]++;
+  return out;
+}
+
+export const MAX_TASK_TITLE = 100;
+
+export type TaskResult =
+  | { ok: true; value: { title: string; dueDate: Date } }
+  | { ok: false; errors: Partial<Record<"title" | "dueDate", string>> };
+
+export function validateTask(input: { title: string; dueDate: string }): TaskResult {
+  const errors: Partial<Record<"title" | "dueDate", string>> = {};
   const title = input.title.trim();
   if (title.length === 0) errors.title = "제목을 입력하세요";
-  else if (title.length > MAX_CHECK_TITLE) errors.title = `제목은 ${MAX_CHECK_TITLE}자 이하로 입력하세요`;
-  const date = parseDay(input.date.trim());
-  if (!date) errors.date = "날짜를 선택하세요";
+  else if (title.length > MAX_TASK_TITLE) errors.title = `제목은 ${MAX_TASK_TITLE}자 이하로 입력하세요`;
+  const dueDate = parseDay(input.dueDate.trim());
+  if (!dueDate) errors.dueDate = "마감일을 선택하세요";
   if (Object.keys(errors).length) return { ok: false, errors };
-  return { ok: true, value: { kind: kind!, title, date: date! } };
+  return { ok: true, value: { title, dueDate: dueDate! } };
 }
 
-/** 회의는 체크 안 됐으면 불참. 투표·과제는 마감일(date)이 지난 뒤에만 미참여. 날짜는 "YYYY-MM-DD" (KST) */
-export function isMissed(e: { kind: CheckKind; date: string }, done: boolean, today: string): boolean {
-  return !done && (e.kind === "MEETING" || e.date < today);
+/** 마감일(dueDate)이 지났는데 체크되지 않았으면 미참여. 날짜는 "YYYY-MM-DD" (KST) */
+export function isMissed(dueDate: string, done: boolean, today: string): boolean {
+  return !done && dueDate < today;
 }
 
-export type CheckEventSummary = { id: string; kind: CheckKind; title: string; date: string };
-export type MemberSummary = { attended: number; meetings: number; missed: CheckEventSummary[] };
+export type TaskSummary = { id: string; title: string; dueDate: string };
 
-/** 멤버별 회의 출석 수와 불참·미참여 기록. 기록이 만들어질 때 대상(entries)에 없던 멤버는 세지 않는다 */
-export function summarize(
+/** 멤버별 미참여 투표·과제. 과제를 만들 때 대상(entries)에 없던 멤버는 세지 않는다 */
+export function missedTasks(
   userIds: string[],
-  events: (CheckEventSummary & { entries: { userId: string; done: boolean }[] })[],
+  tasks: (TaskSummary & { entries: { userId: string; done: boolean }[] })[],
   today: string,
-): Record<string, MemberSummary> {
-  const out: Record<string, MemberSummary> = Object.fromEntries(userIds.map((id) => [id, { attended: 0, meetings: 0, missed: [] }]));
-  for (const { entries, ...e } of events) {
-    for (const { userId, done } of entries) {
-      const s = out[userId];
-      if (!s) continue;
-      if (e.kind === "MEETING") {
-        s.meetings++;
-        if (done) s.attended++;
-      }
-      if (isMissed(e, done, today)) s.missed.push(e);
-    }
+): Record<string, TaskSummary[]> {
+  const out: Record<string, TaskSummary[]> = Object.fromEntries(userIds.map((id) => [id, []]));
+  for (const { entries, ...t } of tasks) {
+    for (const { userId, done } of entries) if (out[userId] && isMissed(t.dueDate, done, today)) out[userId].push(t);
   }
   return out;
 }
