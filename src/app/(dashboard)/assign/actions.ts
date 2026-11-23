@@ -92,12 +92,3 @@ export async function setLead(projectId: string, userId: string, isLead: boolean
   revalidate(projectId);
   return {};
 }
-
-export async function setPosition(projectId: string, userId: string, position: Position): Promise<{ error?: string }> {
-  await requireAdmin();
-  if (!(position in Position)) return { error: "잘못된 포지션입니다" };
-  const { count } = await db.projectMember.updateMany({ where: { projectId, userId }, data: { position } });
-  if (count === 0) return { error: "배치되지 않은 멤버입니다" };
-  revalidate(projectId);
-  return {};
-}

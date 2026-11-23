@@ -26,7 +26,7 @@ export default async function AssignPage() {
     db.project.findMany({
       select: {
         id: true, code: true, title: true, status: true, priority: true, featured: true,
-        members: { select: { userId: true, position: true, isLead: true, user: { select: { name: true } } } },
+        members: { select: { userId: true, isLead: true, user: { select: { name: true } } } },
       },
     }),
   ]);
@@ -37,7 +37,7 @@ export default async function AssignPage() {
         members={users.map((u) => ({ id: u.id, name: u.name, codes: u.memberships.map((m) => m.project.code).sort() }))}
         projects={sortProjects(projects).map(({ members, ...p }) => ({
           ...p,
-          members: members.map((m) => ({ userId: m.userId, name: m.user.name, position: m.position, isLead: m.isLead })),
+          members: members.map((m) => ({ userId: m.userId, name: m.user.name, isLead: m.isLead })),
         }))}
       />
     </>
