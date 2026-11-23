@@ -17,9 +17,9 @@ export type ProfileViewData = {
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <h2 className="mb-2 text-sm font-semibold text-slate-900">{title}</h2>
-      {children}
+    <div className="py-4 first:pt-0 last:pb-0 sm:grid sm:grid-cols-[9rem_1fr] sm:gap-4">
+      <h3 className="mb-1.5 text-xs font-semibold text-slate-500 sm:mb-0 sm:pt-0.5">{title}</h3>
+      <div>{children}</div>
     </div>
   );
 }
@@ -29,7 +29,7 @@ const EMPTY = <p className="text-sm text-slate-400">작성하지 않았습니다
 /** 운영진이 보는 읽기 전용 역량 프로필 */
 export function ProfileView({ data }: { data: ProfileViewData }) {
   return (
-    <div className="space-y-6">
+    <div className="divide-y divide-slate-100 rounded-md border border-slate-200 px-4 py-4">
       <Block title="지금 수준">
         {data.level ? (
           <p className="flex flex-wrap items-center gap-2 text-sm text-slate-700">

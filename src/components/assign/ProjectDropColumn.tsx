@@ -14,6 +14,7 @@ export type BoardProject = {
   code: string;
   title: string;
   status: ProjectStatus;
+  featured: boolean;
   members: { userId: string; name: string; position: Position; isLead: boolean }[];
 };
 
@@ -47,10 +48,14 @@ export function ProjectDropColumn({
         </div>
         <Badge tone={STATUS_TONE[project.status]}>{STATUS_LABEL[project.status]}</Badge>
       </div>
+      <p className="mb-1.5 text-xs text-slate-500 tabular-nums">멤버 {members.length}명</p>
+      {/* 인원이 늘어도 카드 높이는 같게 — 목록 칸 높이를 고정하고 넘치면 안에서 스크롤 */}
       {members.length === 0 ? (
-        <p className="py-1 text-xs text-slate-400">여기로 드래그해서 배치</p>
+        <p className="flex h-28 items-center justify-center rounded-md border border-dashed border-slate-200 text-xs text-slate-400">
+          여기로 드래그해서 배치
+        </p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="h-28 space-y-1.5 overflow-y-auto pr-1">
           {members.map((m) => (
             <li key={m.userId} className="group flex items-center gap-2">
               <button
@@ -76,8 +81,10 @@ export function ProjectDropColumn({
                   )}
                 />
               </button>
-              <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{m.name}</span>
-              {m.isLead && <Badge tone="navy">팀장</Badge>}
+              <span className={cn("min-w-0 flex-1 truncate text-sm", m.isLead ? "font-semibold text-navy-900" : "text-slate-700")}>
+                {m.name}
+                {m.isLead && <span className="sr-only"> (팀장)</span>}
+              </span>
               <Select
                 aria-label={`${m.name} 포지션`}
                 variant="underline"
