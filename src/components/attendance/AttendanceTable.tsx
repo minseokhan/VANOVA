@@ -61,16 +61,16 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
         <table className="w-full min-w-[760px] table-fixed">
           <colgroup>
             <col className="w-48" />
+            <col className="w-44" />
             <col className="w-64" />
             <col />
-            <col className="w-44" />
           </colgroup>
           <thead className="bg-navy-50">
             <tr>
               <th className={`${th} pl-8`}>이름</th>
+              <th className={th}>누적 (출석 · 인정 · 불참)</th>
               <th className={th}>회의 출석</th>
-              <th className={th}>인정 불참 사유</th>
-              <th className={`${th} pr-8`}>누적 (출석 · 인정 · 불참)</th>
+              <th className={`${th} pr-8`}>인정 불참 사유</th>
             </tr>
           </thead>
           <tbody>
@@ -81,6 +81,10 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
                     <Avatar name={r.name} />
                     <span className="truncate">{r.name}</span>
                   </span>
+                </td>
+                <td className="px-3 py-2 text-sm text-slate-700 tabular-nums">
+                  {r.totals.PRESENT} · {r.totals.EXCUSED} ·{" "}
+                  <span className={r.totals.ABSENT > 0 ? "font-medium text-red-700" : undefined}>{r.totals.ABSENT}</span>
                 </td>
                 <td className="px-3 py-2">
                   <div role="radiogroup" aria-label={`${r.name} 출석`} className="inline-flex rounded-md border border-slate-300 p-0.5">
@@ -101,7 +105,7 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
                     ))}
                   </div>
                 </td>
-                <td className="px-3 py-2">
+                <td className="py-2 pr-8 pl-3">
                   {r.status === "EXCUSED" && (
                     <Input
                       key={`${week}-${r.userId}`}
@@ -109,15 +113,11 @@ export function AttendanceTable({ week, rows }: { week: string; rows: Attendance
                       defaultValue={r.reason ?? ""}
                       maxLength={MAX_REASON}
                       placeholder="사유 입력 후 Enter (예: 학교 시험)"
-                      className="py-1.5 text-sm"
+                      className="max-w-72 py-1.5 text-sm"
                       onBlur={(e) => saveReason(r, e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                     />
                   )}
-                </td>
-                <td className="py-2 pr-8 pl-3 text-sm text-slate-700 tabular-nums">
-                  {r.totals.PRESENT} · {r.totals.EXCUSED} ·{" "}
-                  <span className={r.totals.ABSENT > 0 ? "font-medium text-red-700" : undefined}>{r.totals.ABSENT}</span>
                 </td>
               </tr>
             ))}
