@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MinutesContext } from "./compose";
 
 const create = vi.fn();
 vi.mock("@anthropic-ai/sdk", () => ({
@@ -9,12 +10,11 @@ vi.mock("@anthropic-ai/sdk", () => ({
 
 const { generateMinutesContent, MINUTES_MODEL } = await import("./llm");
 
-const ctx = { date: "2026-10-26", notes: "메모", roster: ["박동진"], projects: [{ code: "2-4", title: "X", report: null }] };
+const ctx: MinutesContext = { date: "2026-10-26", notes: "메모", attendance: [], projects: [{ code: "2-4", title: "X", report: null }] };
 const output = {
   startTime: "22:00",
   endTime: null,
   keyConclusion: "결론",
-  absentees: [],
   remarks: "",
   decisions: [],
   projects: [],

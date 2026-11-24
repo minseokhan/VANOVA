@@ -7,6 +7,7 @@ import {
   type MinutesDraft,
   minutesOutputSchema,
   parseRoster,
+  resolveAttendance,
   validateGenerateInput,
   MAX_NOTES,
   type MinutesContext,
@@ -15,8 +16,13 @@ import {
 
 const ctx: MinutesContext = {
   date: "2026-10-26",
-  notes: "성정헌은 학교 팀플로 불참, 나머지는 다 참여함. 4-3은 팀원 목록 업데이트 요청.",
-  roster: ["박동진", "남유리", "성정헌", "한민석"],
+  notes: "4-3은 팀원 목록 업데이트 요청.",
+  attendance: [
+    { name: "박동진", status: "PRESENT", reason: null },
+    { name: "남유리", status: "PRESENT", reason: null },
+    { name: "성정헌", status: "EXCUSED", reason: "학교 팀플" },
+    { name: "한민석", status: "ABSENT", reason: null },
+  ],
   projects: [
     { code: "2-4", title: "MLI 한국지부 홈페이지 전면 개편", report: null },
     {
@@ -41,8 +47,7 @@ const llm: MinutesLlmOutput = {
   startTime: "22:00",
   endTime: "22:40",
   keyConclusion: "주요 프로젝트 3건의 진행 상황을 점검함.",
-  absentees: [{ name: "성정헌", reason: "학교 팀플" }],
-  remarks: "성정헌은 학교 팀플 회의로 인해 불참함.",
+  remarks: "성정헌은 학교 팀플로 인해 불참함.\n한민석은 사전 연락 없이 불참함.",
   decisions: [
     { label: "운영", text: "대시보드 팀원 정보 갱신" },
     { label: "4-3", text: "주 1이슈 진행" },
@@ -73,10 +78,12 @@ describe("buildMinutesPrompt", () => {
     expect(system).toContain("URL");
   });
 
-  it("명단·주간 보고·자유 메모를 모두 담고 미제출을 표시", () => {
+  it("출석 기록·주간 보고·자유 메모를 모두 담고 미제출을 표시", () => {
     const { system, user } = buildMinutesPrompt(ctx);
     expect(system).toContain("회의록");
-    expect(user).toContain("박동진, 남유리, 성정헌, 한민석");
+    expect(user).toContain("- 출석: 박동진, 남유리");
+    expect(user).toContain("- 인정 불참: 성정헌 (사유: 학교 팀플)");
+    expect(user).toContain("- 불참: 한민석");
     expect(user).toContain("역할 분배");
     expect(user).toContain("팀원 업데이트 필요");
     expect(user).toContain("2-4 MLI 한국지부 홈페이지 전면 개편");
@@ -86,9 +93,9 @@ describe("buildMinutesPrompt", () => {
 });
 
 describe("minutesOutputSchema", () => {
-  it("프로젝트 코드는 enum으로 제한하고, 불참자 이름은 명단 밖도 받는다", () => {
+  it("프로젝트 코드는 enum으로 제한하고, 불참자는 출석 기록으로 정하므로 받지 않는다", () => {
     const s = JSON.stringify(minutesOutputSchema(ctx));
-    expect(s).not.toContain('"enum":["박동진","남유리","성정헌","한민석"]');
+    expect(s).not.toContain("absentees");
     expect(s).toContain('"enum":["2-4","4-3"]');
   });
 });
@@ -109,11 +116,11 @@ describe("assembleMinutes", () => {
     expect(doc.vars.criteria).toBe("2-4, 4-3 프로젝트 진행 상황 공유 및 피드백, 프로젝트별 후속 액션 계획 선정");
   });
 
-  it("참석 = 명단 - 불참", () => {
-    expect(doc.vars.attendees).toBe("박동진, 남유리, 한민석");
-    expect(doc.vars.attendCount).toBe("3");
-    expect(doc.vars.absentees).toBe("성정헌");
-    expect(doc.vars.absentCount).toBe("1");
+  it("참석·불참은 출석 기록에서 (인정 불참·불참 모두 불참)", () => {
+    expect(doc.vars.attendees).toBe("박동진, 남유리");
+    expect(doc.vars.attendCount).toBe("2");
+    expect(doc.vars.absentees).toBe("성정헌, 한민석");
+    expect(doc.vars.absentCount).toBe("2");
   });
 
   it("결정사항은 있는 만큼만 행을 만든다", () => {
@@ -146,7 +153,8 @@ describe("assembleMinutes", () => {
   });
 
   it("불참·결정사항이 없을 때의 기본 문구", () => {
-    const d = build({ ...llm, absentees: [], remarks: " ", decisions: [] });
+    const all = ctx.attendance.map((a) => ({ ...a, status: "PRESENT" as const, reason: null }));
+    const d = finalizeMinutes(assembleMinutes({ ...ctx, attendance: all }, { ...llm, remarks: " ", decisions: [] }));
     expect(d.vars.absentees).toBe("없음");
     expect(d.vars.absentCount).toBe("0");
     expect(d.vars.attendCount).toBe("4");
@@ -154,27 +162,48 @@ describe("assembleMinutes", () => {
     expect(d.decisions).toEqual([{ decisionLabel: "-", decisionText: "없음" }]);
   });
 
-  it("명단에 없는 불참자도 버리지 않고 불참으로 기록 (명단에 빠진 운영진 등)", () => {
-    const d = build({ ...llm, absentees: [{ name: "성정헌", reason: "팀플" }, { name: " 운영진A ", reason: "?" }] });
-    expect(d.vars.absentees).toBe("성정헌, 운영진A");
-    expect(d.vars.absentCount).toBe("2");
-    expect(d.vars.attendees).toBe("박동진, 남유리, 한민석");
+});
+
+describe("resolveAttendance", () => {
+  const members = [
+    { id: "a", name: "박동진" },
+    { id: "b", name: "남유리" },
+  ];
+  it("부원 순서대로 그 주 상태·사유를 붙인다", () => {
+    expect(
+      resolveAttendance(members, [
+        { userId: "b", status: "EXCUSED", reason: "시험" },
+        { userId: "a", status: "PRESENT", reason: null },
+        { userId: "z", status: "ABSENT", reason: null },
+      ]),
+    ).toEqual({
+      ok: true,
+      value: [
+        { name: "박동진", status: "PRESENT", reason: null },
+        { name: "남유리", status: "EXCUSED", reason: "시험" },
+      ],
+    });
+  });
+
+  it("체크 안 된 부원이 있으면 이름을 알려준다", () => {
+    const r = resolveAttendance(members, [{ userId: "a", status: "PRESENT", reason: null }]);
+    expect(r).toEqual({ ok: false, error: expect.stringContaining("남유리") });
   });
 });
 
 describe("validateGenerateInput", () => {
   it("정상 입력", () => {
-    expect(validateGenerateInput({ date: "2026-10-26", notes: " 메모 ", roster: "박동진, 남유리" })).toEqual({
+    expect(validateGenerateInput({ date: "2026-10-26", notes: " 메모 " })).toEqual({
       ok: true,
-      value: { date: "2026-10-26", notes: "메모", roster: ["박동진", "남유리"] },
+      value: { date: "2026-10-26", notes: "메모" },
     });
   });
 
-  it("날짜·메모·명단 오류", () => {
-    const r = validateGenerateInput({ date: "2026-02-30", notes: " ", roster: " , " });
+  it("날짜·메모 오류", () => {
+    const r = validateGenerateInput({ date: "2026-02-30", notes: " " });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(["date", "notes", "roster"]);
-    const long = validateGenerateInput({ date: "2026-10-26", notes: "가".repeat(MAX_NOTES + 1), roster: "a" });
+    if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(["date", "notes"]);
+    const long = validateGenerateInput({ date: "2026-10-26", notes: "가".repeat(MAX_NOTES + 1) });
     expect(long.ok).toBe(false);
   });
 });

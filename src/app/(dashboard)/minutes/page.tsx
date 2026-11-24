@@ -20,18 +20,15 @@ export default async function MinutesPage({ searchParams }: { searchParams: Prom
   const isAdmin = user.role === "ADMIN";
   const month = parseMonth((await searchParams).month ?? "") ?? currentMonth();
 
-  const [minutes, members, notes] = await Promise.all([
+  const [minutes, notes] = await Promise.all([
     db.meetingMinute.findMany({
       where: { date: monthRange(month) },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       select: { id: true, date: true, title: true, fileUrl: true, author: { select: { name: true } } },
     }),
-    isAdmin ? db.user.findMany({ where: { role: "MEMBER", approved: true }, select: { name: true } }) : [],
     isAdmin ? db.meetingNote.findMany({ select: { date: true, notes: true, generatedUrl: true } }) : [],
   ]);
   const saved = Object.fromEntries(notes.map((n) => [n.date.toISOString().slice(0, 10), { notes: n.notes, url: n.generatedUrl }]));
-  // 참석 대상 기본값: 승인된 부원 + 작성하는 운영진 본인
-  const roster = [...new Set([...members.map((m) => m.name), user.name])].sort((a, b) => a.localeCompare(b, "ko")).join(", ");
 
   return (
     <>
@@ -41,7 +38,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Prom
 
         {isAdmin && (
           <div className="flex flex-wrap items-start gap-3">
-            <GenerateMinuteForm defaultDate={defaultMeetingDate()} defaultRoster={roster} saved={saved} />
+            <GenerateMinuteForm defaultDate={defaultMeetingDate()} saved={saved} />
             <MinuteForm today={formatDate(new Date())} />
           </div>
         )}
