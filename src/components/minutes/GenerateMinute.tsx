@@ -1,17 +1,16 @@
 "use client";
 
 import { ExternalLink, FileText, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { generateMinute, type GenerateState } from "@/app/(dashboard)/minutes/actions";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Field } from "@/components/ui/Field";
-import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { MAX_NOTES } from "@/lib/minutes/compose";
 
 const NOTES_PLACEHOLDER = `예)
-성정헌은 학교 팀플 회의로 불참, 나머지 멤버는 다 참여함.
 4-3은 팀원 목록이 헷갈린다고 해서 대시보드 팀원 정보 업데이트하기로 함.
 7-2는 팀원 학습 수준 파악용 간단한 퀴즈를 다음 주까지 만들어 달라는 요청이 있었음.`;
 
@@ -22,16 +21,13 @@ const NOTES_PLACEHOLDER = `예)
  */
 export function GenerateMinuteForm({
   defaultDate,
-  defaultRoster,
   saved,
 }: {
   defaultDate: string;
-  defaultRoster: string;
   saved: Record<string, { notes: string; url: string | null }>;
 }) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(defaultDate);
-  const [roster, setRoster] = useState(defaultRoster);
   const [notes, setNotes] = useState(saved[defaultDate]?.notes ?? "");
   const [state, formAction, pending] = useActionState<GenerateState, FormData>(generateMinute, {});
   const e = state.fieldErrors ?? {};
@@ -66,11 +62,17 @@ export function GenerateMinuteForm({
           />
           <input type="hidden" name="date" value={date} />
         </Field>
-        <Field id="gm-roster" label="참석 대상 명단 (쉼표로 구분)" error={e.roster}>
-          <Input id="gm-roster" name="roster" value={roster} onChange={(ev) => setRoster(ev.target.value)} required />
-        </Field>
+        <div className="space-y-1.5 text-sm">
+          <p className="font-medium text-slate-700">참석 · 불참</p>
+          <p className="py-2 text-slate-600">
+            <Link href="/attendance" className="font-medium text-navy-700 underline underline-offset-2">
+              출석 · 참여
+            </Link>
+            에 기록한 그 주 회의 출석으로 채웁니다. 인정 불참은 사유까지, 불참은 사전 연락 없는 불참으로 적습니다.
+          </p>
+        </div>
       </div>
-      <Field id="gm-notes" label="회의 내용 (불참자와 사유, 프로젝트별 피드백, 결정사항, 요구사항 등을 자유롭게)" error={e.notes}>
+      <Field id="gm-notes" label="회의 내용 (프로젝트별 피드백, 결정사항, 요구사항 등을 자유롭게)" error={e.notes}>
         <Textarea
           id="gm-notes"
           name="notes"
@@ -94,7 +96,7 @@ export function GenerateMinuteForm({
             <p className="text-sm font-semibold text-navy-900">{date} 회의록이 만들어져 있습니다</p>
             <p className="text-xs text-slate-600">
               {forDate && state.unchanged
-                ? "바뀐 내용이 없어 다시 생성하지 않았습니다. 메모·명단을 고치거나 주간 보고가 바뀌면 재생성할 수 있습니다."
+                ? "바뀐 내용이 없어 다시 생성하지 않았습니다. 메모·출석 기록·주간 보고가 바뀌면 재생성할 수 있습니다."
                 : "드라이브 회의록 폴더에 저장되었습니다. 확인한 뒤 \"회의록 등록\"으로 목록에 올려 주세요."}
             </p>
           </div>

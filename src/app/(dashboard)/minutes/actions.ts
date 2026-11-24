@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/guards";
 import { readFile } from "node:fs/promises";
-import { assembleMinutes, finalizeMinutes, validateGenerateInput } from "@/lib/minutes/compose";
+import { assembleMinutes, finalizeMinutes, resolveAttendance, validateGenerateInput } from "@/lib/minutes/compose";
 import { renderMinutesDocx, TEMPLATE_PATH } from "@/lib/minutes/docx";
 import { uploadAsGoogleDoc } from "@/lib/minutes/drive";
 import { minutesInputHash } from "@/lib/minutes/hash";
@@ -39,10 +39,9 @@ export async function generateMinute(_prev: GenerateState, fd: FormData): Promis
   const input = validateGenerateInput({
     date: String(fd.get("date") ?? ""),
     notes: String(fd.get("notes") ?? ""),
-    roster: String(fd.get("roster") ?? ""),
   });
   if (!input.ok) return { fieldErrors: input.errors };
-  const { date, notes, roster } = input.value;
+  const { date, notes } = input.value;
 
   const day = new Date(`${date}T00:00:00Z`);
   await db.meetingNote.upsert({
@@ -53,6 +52,14 @@ export async function generateMinute(_prev: GenerateState, fd: FormData): Promis
   revalidatePath("/minutes");
 
   const weekStart = getWeekStart(day);
+  // 참석·불참·사유는 출석 · 참여 페이지의 그 주 기록 (부원만, 운영진 제외)
+  const [members, attendanceRows] = await Promise.all([
+    db.user.findMany({ where: { role: "MEMBER", approved: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.attendance.findMany({ where: { weekStart }, select: { userId: true, status: true, reason: true } }),
+  ]);
+  const attendance = resolveAttendance(members, attendanceRows);
+  if (!attendance.ok) return { error: attendance.error };
+
   const projects = await db.project.findMany({
     where: { featured: true },
     orderBy: { code: "asc" },
@@ -70,7 +77,7 @@ export async function generateMinute(_prev: GenerateState, fd: FormData): Promis
   const ctx = {
     date,
     notes,
-    roster,
+    attendance: attendance.value,
     projects: projects.map(({ code, title, weeklyUpdates: [r] }) => ({
       code,
       title,
@@ -86,7 +93,7 @@ export async function generateMinute(_prev: GenerateState, fd: FormData): Promis
     })),
   };
 
-  // 메모·명단·주간 보고가 지난번 생성 때와 같으면 AI 를 다시 부르지 않고 기존 문서를 돌려준다
+  // 메모·출석 기록·주간 보고가 지난번 생성 때와 같으면 AI 를 다시 부르지 않고 기존 문서를 돌려준다
   const hash = minutesInputHash(ctx);
   const prev = await db.meetingNote.findUnique({ where: { date: day }, select: { generatedUrl: true, generatedHash: true } });
   if (prev?.generatedUrl && prev.generatedHash === hash) return { ok: true, url: prev.generatedUrl, date, unchanged: true };
